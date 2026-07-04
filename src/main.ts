@@ -95,7 +95,6 @@ const boot = (): void => {
       store.dispatch({ type: 'LOAD', state: savedState })
     },
     onSettings: () => modals.openSettings(),
-    onCredits: () => modals.openCredits(),
   })
   const story = createStoryScreen()
   const result = createResultScreen({

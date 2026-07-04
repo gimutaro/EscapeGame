@@ -11,7 +11,6 @@ export interface Modals {
   openDocument(doc: DocumentId): void
   openHints(): void
   openSettings(): void
-  openCredits(): void
   confirm(text: string, onYes: () => void): void
   openCustom(title: string, build: (body: HTMLElement) => void, onClose?: () => void): void
   closeAll(): void
@@ -147,23 +146,6 @@ export const createModals = (store: Store, settings: SettingsStore): Modals => {
     })
   }
 
-  const openCredits = () => {
-    open('この作品について', (body) => {
-      const reader = el('div', 'doc-reader')
-      reader.textContent = [
-        '『久遠寺邸の一夜 〜大正浪漫脱出奇譚〜』',
-        '',
-        '大正十年、春の宵。',
-        '亡き父の親友が遺した謎を解き、',
-        '朝の庭へ辿り着く、ひと晩の物語。',
-        '',
-        '美術・音楽・仕掛け、すべて手続き生成。',
-        '外部素材を使わずに描かれています。',
-      ].join('\n')
-      body.appendChild(reader)
-    })
-  }
-
   const confirmDialog = (text: string, onYes: () => void) => {
     open('確認', (body) => {
       body.appendChild(el('div', 'confirm-text', text))
@@ -185,7 +167,6 @@ export const createModals = (store: Store, settings: SettingsStore): Modals => {
     openDocument,
     openHints,
     openSettings,
-    openCredits,
     confirm: confirmDialog,
     openCustom: open,
     closeAll,

@@ -43,7 +43,6 @@ export const createTitleScreen = (handlers: {
   onNewGame(): void
   onContinue(): void
   onSettings(): void
-  onCredits(): void
 }): TitleScreen => {
   const root = el('div', 'screen title-screen hidden')
   const inner = el('div', 'title-inner')
@@ -52,10 +51,13 @@ export const createTitleScreen = (handlers: {
   menu.appendChild(button('menu-btn', 'はじめる', handlers.onNewGame))
   menu.appendChild(continueBtn)
   menu.appendChild(button('menu-btn', '設定', handlers.onSettings))
-  menu.appendChild(button('menu-btn', 'この作品について', handlers.onCredits))
   const titleText = el('div', 'title-text')
   const titleH1 = el('h1')
-  titleH1.append('久遠寺邸の', document.createElement('wbr'), '一夜')
+  const titleLine1 = el('span', 'title-line')
+  titleLine1.textContent = '久遠寺邸の'
+  const titleLine2 = el('span', 'title-line')
+  titleLine2.textContent = '一夜'
+  titleH1.append(titleLine1, document.createElement('wbr'), titleLine2)
   titleText.appendChild(titleH1)
   titleText.appendChild(el('div', 'subtitle', '大正浪漫脱出奇譚'))
   inner.appendChild(menu)
@@ -123,11 +125,12 @@ export const createStoryScreen = (): StoryScreen => {
     }
     clearRenderTimer()
     text.classList.add('dim')
+    // .story-text の transition: opacity 0.7s と揃える(完全にフェードアウトしてから差し替える)
     renderTimer = window.setTimeout(() => {
       renderTimer = null
       text.textContent = page
       text.classList.remove('dim')
-    }, 320)
+    }, 700)
   }
 
   root.addEventListener('click', () => {

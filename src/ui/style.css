@@ -311,6 +311,7 @@ button { font-family: var(--mincho); cursor: pointer; }
   color: var(--paper);
   text-shadow: 0 0 30px rgba(201, 163, 78, 0.35);
 }
+.title-text h1 .title-line { white-space: nowrap; }
 .title-text .subtitle {
   font-size: clamp(14px, 2vmin, 19px);
   letter-spacing: 0.5em;
