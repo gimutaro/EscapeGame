@@ -156,10 +156,10 @@ export const buildLiving = (materials: Materials, tweens: Tweens): RoomModule =>
   table.add(saucer)
   group.add(table)
 
-  // 蓄音機
+  // 蓄音機(ラッパはソファ方向を向く。gramophone→sofa のベクトルとラッパの向きの
+  // 内積が最大になる回転を数値計算で求めた結果、回転なしが最適だった)
   const gramophone = new THREE.Group()
   gramophone.position.set(3.5, 0, 1.6)
-  gramophone.rotation.y = Math.PI
   gramophone.add(boxMesh(0.6, 0.72, 0.5, materials.woodRed, 0, 0.36, 0))
   gramophone.add(boxMesh(0.5, 0.14, 0.42, materials.woodDark, 0, 0.79, 0))
   const hornPoints: THREE.Vector2[] = []
