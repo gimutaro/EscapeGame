@@ -12,6 +12,116 @@ import { memoTexture, paperTexture } from '../textures/small'
 import type { DevicePart } from './livingDevices'
 import type { Interactable } from '../types'
 
+type BankersLamp = {
+  group: THREE.Group
+  setLit(on: boolean): void
+}
+
+/** 机上のバンカーズランプ(真鍮の台座+緑ガラスの横置きシェード) */
+const buildBankersLamp = (materials: Materials): BankersLamp => {
+  const group = new THREE.Group()
+  // 台座(曲面プロファイルの回転体)
+  const basePoints = [
+    new THREE.Vector2(0.105, 0),
+    new THREE.Vector2(0.105, 0.014),
+    new THREE.Vector2(0.08, 0.024),
+    new THREE.Vector2(0.058, 0.03),
+    new THREE.Vector2(0.05, 0.048),
+    new THREE.Vector2(0.026, 0.06),
+    new THREE.Vector2(0.018, 0.072),
+    new THREE.Vector2(0, 0.072),
+  ]
+  const base = meshOf(new THREE.LatheGeometry(basePoints, 28), materials.brass)
+  group.add(base)
+  // 支柱と中程の締め輪
+  const stem = cylinderMesh(0.012, 0.015, 0.19, materials.brass, 12)
+  stem.position.y = 0.165
+  group.add(stem)
+  const collar = cylinderMesh(0.018, 0.018, 0.012, materials.brassDark, 12)
+  collar.position.y = 0.145
+  group.add(collar)
+  // シェードまわり(pivot ごとわずかに手前へ傾ける)
+  const pivot = new THREE.Group()
+  pivot.position.y = 0.215
+  pivot.rotation.x = 0.12
+  group.add(pivot)
+  // 緑ガラスの釣鐘型シェード(開口は下向き)
+  const shadeMaterial = new THREE.MeshPhysicalMaterial({
+    color: '#14523a',
+    emissive: '#2f9868',
+    emissiveIntensity: 0.55,
+    side: THREE.DoubleSide,
+    roughness: 0.28,
+    clearcoat: 0.6,
+    transparent: true,
+    opacity: 0.92,
+  })
+  const shadePoints = [
+    new THREE.Vector2(0.115, 0),
+    new THREE.Vector2(0.108, 0.018),
+    new THREE.Vector2(0.088, 0.052),
+    new THREE.Vector2(0.06, 0.078),
+    new THREE.Vector2(0.036, 0.092),
+    new THREE.Vector2(0.028, 0.1),
+  ]
+  const shade = meshOf(new THREE.LatheGeometry(shadePoints, 28), shadeMaterial, false, false)
+  pivot.add(shade)
+  // 内側の乳白ガラス(点灯時に暖色で光り、開口から見える)
+  const innerMaterial = new THREE.MeshStandardMaterial({
+    color: '#f5e6c8',
+    emissive: '#ffca7a',
+    emissiveIntensity: 1.1,
+    side: THREE.DoubleSide,
+  })
+  const innerPoints = shadePoints.map((p) => new THREE.Vector2(p.x * 0.94, p.y + 0.004))
+  const inner = meshOf(new THREE.LatheGeometry(innerPoints, 28), innerMaterial, false, false)
+  pivot.add(inner)
+  // 下縁の真鍮リムと、頂部の口金・飾り
+  const rim = meshOf(new THREE.TorusGeometry(0.115, 0.006, 8, 28), materials.brass)
+  rim.rotation.x = Math.PI / 2
+  pivot.add(rim)
+  const neck = cylinderMesh(0.02, 0.026, 0.026, materials.brass, 14)
+  neck.position.y = 0.108
+  pivot.add(neck)
+  const finial = meshOf(new THREE.SphereGeometry(0.012, 10, 8), materials.brass)
+  finial.position.y = 0.128
+  pivot.add(finial)
+  // ソケットと電球(開口から下に少し覗く)
+  const socket = cylinderMesh(0.014, 0.016, 0.036, materials.brassDark, 10)
+  socket.position.y = 0.04
+  pivot.add(socket)
+  const bulbMaterial = new THREE.MeshStandardMaterial({
+    color: '#fff4d8',
+    emissive: '#ffd9a0',
+    emissiveIntensity: 2.6,
+  })
+  const bulb = meshOf(new THREE.SphereGeometry(0.026, 12, 10), bulbMaterial, false, false)
+  bulb.scale.set(1, 1.3, 1)
+  bulb.position.y = 0.0
+  pivot.add(bulb)
+  // 引き紐チェーン(玉鎖+輪)
+  const chain = new THREE.Group()
+  chain.position.set(0.085, 0.235, 0.05)
+  for (let i = 0; i < 4; i++) {
+    const bead = meshOf(new THREE.SphereGeometry(0.0045, 8, 6), materials.brassDark, false, false)
+    bead.position.y = -i * 0.012
+    chain.add(bead)
+  }
+  const ring = meshOf(new THREE.TorusGeometry(0.009, 0.0028, 6, 12), materials.brassDark, false, false)
+  ring.position.y = -0.052
+  chain.add(ring)
+  group.add(chain)
+
+  return {
+    group,
+    setLit(on) {
+      shadeMaterial.emissiveIntensity = on ? 0.55 : 0.04
+      innerMaterial.emissiveIntensity = on ? 1.1 : 0.06
+      bulbMaterial.emissiveIntensity = on ? 2.6 : 0.05
+    },
+  }
+}
+
 /** 両袖机(引き出し・バンカーズランプ) */
 export const buildDesk = (materials: Materials, tweens: Tweens): DevicePart => {
   const group = new THREE.Group()
@@ -46,46 +156,52 @@ export const buildDesk = (materials: Materials, tweens: Tweens): DevicePart => {
   group.add(drawer)
   // 吸い取り紙と文具
   group.add(boxMesh(0.52, 0.012, 0.36, new THREE.MeshStandardMaterial({ color: '#3e5443', roughness: 1 }), 0.06, 0.82, 0.05))
-  const inkwell = cylinderMesh(0.035, 0.045, 0.07, new THREE.MeshPhysicalMaterial({ color: '#182028', roughness: 0.15 }), 12)
-  inkwell.position.set(0.5, 0.85, -0.2)
+  // インク壺(切子ガラス+真鍮の蓋)
+  const inkwell = new THREE.Group()
+  inkwell.position.set(0.5, 0.81, -0.2)
+  const inkGlassMaterial = new THREE.MeshPhysicalMaterial({
+    color: '#1c2733',
+    roughness: 0.08,
+    clearcoat: 1,
+    clearcoatRoughness: 0.15,
+    flatShading: true,
+  })
+  const inkBody = meshOf(new THREE.CylinderGeometry(0.036, 0.044, 0.052, 8), inkGlassMaterial)
+  inkBody.position.y = 0.026
+  const inkShoulder = meshOf(new THREE.CylinderGeometry(0.02, 0.036, 0.014, 8), inkGlassMaterial)
+  inkShoulder.position.y = 0.059
+  const inkCollar = cylinderMesh(0.017, 0.019, 0.012, materials.brass, 12)
+  inkCollar.position.y = 0.071
+  const inkLid = meshOf(
+    new THREE.SphereGeometry(0.016, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+    materials.brass,
+  )
+  inkLid.scale.y = 0.7
+  inkLid.position.y = 0.077
+  const inkKnob = meshOf(new THREE.SphereGeometry(0.005, 8, 6), materials.brassDark)
+  inkKnob.position.y = 0.09
+  inkwell.add(inkBody, inkShoulder, inkCollar, inkLid, inkKnob)
   group.add(inkwell)
-  const pen = cylinderMesh(0.006, 0.008, 0.2, materials.brassDark, 8)
-  pen.rotation.z = Math.PI / 2.4
+  // 万年筆(漆黒の軸+真鍮の首金とペン先)
+  const pen = new THREE.Group()
+  const penBlack = new THREE.MeshPhysicalMaterial({ color: '#101014', roughness: 0.18, clearcoat: 1 })
+  const penBody = cylinderMesh(0.0052, 0.006, 0.115, penBlack, 12)
+  const penTail = meshOf(new THREE.ConeGeometry(0.006, 0.02, 12), penBlack)
+  penTail.rotation.x = Math.PI
+  penTail.position.y = -0.0675
+  const penBand = cylinderMesh(0.0062, 0.0062, 0.007, materials.brass, 12)
+  penBand.position.y = 0.061
+  const penNib = meshOf(new THREE.ConeGeometry(0.0045, 0.028, 12), materials.brass)
+  penNib.position.y = 0.0785
+  pen.add(penBody, penTail, penBand, penNib)
+  pen.rotation.z = Math.PI / 2
   pen.rotation.y = 0.5
-  pen.position.set(0.3, 0.83, 0.12)
+  pen.position.set(0.3, 0.833, 0.12)
   group.add(pen)
   // バンカーズランプ
-  const lamp = new THREE.Group()
-  lamp.position.set(-0.52, 0.81, -0.18)
-  const base = cylinderMesh(0.07, 0.09, 0.03, materials.brass, 14)
-  lamp.add(base)
-  const stem = cylinderMesh(0.012, 0.012, 0.24, materials.brass, 8)
-  stem.position.y = 0.13
-  lamp.add(stem)
-  const shade = meshOf(
-    new THREE.CylinderGeometry(0.09, 0.13, 0.11, 16, 1, true, 0, Math.PI),
-    new THREE.MeshPhysicalMaterial({
-      color: '#1d5c40',
-      emissive: '#2f9868',
-      emissiveIntensity: 0.9,
-      side: THREE.DoubleSide,
-      roughness: 0.3,
-    }),
-    false,
-    false,
-  )
-  shade.rotation.y = Math.PI / 2
-  shade.position.y = 0.28
-  lamp.add(shade)
-  const bulbGlow = meshOf(
-    new THREE.SphereGeometry(0.028, 10, 8),
-    new THREE.MeshStandardMaterial({ color: '#fff4d8', emissive: '#ffd9a0', emissiveIntensity: 2.6 }),
-    false,
-    false,
-  )
-  bulbGlow.position.y = 0.25
-  lamp.add(bulbGlow)
-  group.add(lamp)
+  const lamp = buildBankersLamp(materials)
+  lamp.group.position.set(-0.52, 0.81, -0.18)
+  group.add(lamp.group)
   const lampLight = new THREE.PointLight('#ffe2b0', 7, 5, 2)
   lampLight.position.set(-7.62, 1.12, -1.63)
 
@@ -118,8 +234,7 @@ export const buildDesk = (materials: Materials, tweens: Tweens): DevicePart => {
       drawer.position.z = state.flags.deskOpened ? 0.4 : 0
       const on = state.studyLightOn
       lampLight.intensity = on ? 7 : 0
-      ;(shade.material as THREE.MeshPhysicalMaterial).emissiveIntensity = on ? 0.9 : 0.04
-      ;(bulbGlow.material as THREE.MeshStandardMaterial).emissiveIntensity = on ? 2.6 : 0.05
+      lamp.setLit(on)
     },
     onEvent(event) {
       if (event.kind === 'sfx' && event.sfx === 'drawer') {
@@ -155,7 +270,12 @@ export const buildGlobe = (materials: Materials, tweens: Tweens): DevicePart => 
   equator.position.y = 1.0
   group.add(equator)
   // 球体(下半球+開く上半球)
-  const globeMaterial = new THREE.MeshStandardMaterial({ map: globeTexture(), roughness: 0.6 })
+  // 半球が開いたとき内側(裏面)も見えるため両面描画にする
+  const globeMaterial = new THREE.MeshStandardMaterial({
+    map: globeTexture(),
+    roughness: 0.6,
+    side: THREE.DoubleSide,
+  })
   const sphere = new THREE.Group()
   sphere.position.y = 1.0
   const lower = meshOf(new THREE.SphereGeometry(0.32, 40, 24, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), globeMaterial)
@@ -166,7 +286,7 @@ export const buildGlobe = (materials: Materials, tweens: Tweens): DevicePart => 
   upper.position.set(0, 0, 0.3)
   upperHinge.add(upper)
   sphere.add(upperHinge)
-  // 中の覚書
+  // 中の覚書(球体の回転に連動させず、常に正面を向く)
   const memo = meshOf(
     new THREE.PlaneGeometry(0.2, 0.26),
     new THREE.MeshStandardMaterial({ map: memoTexture(), roughness: 0.9, side: THREE.DoubleSide }),
@@ -174,9 +294,9 @@ export const buildGlobe = (materials: Materials, tweens: Tweens): DevicePart => 
     false,
   )
   memo.rotation.x = -0.5
-  memo.position.set(0, 0.1, 0.02)
+  memo.position.set(0, 1.1, 0.02)
   memo.visible = false
-  sphere.add(memo)
+  group.add(memo)
   // 留め金
   const latch = boxMesh(0.03, 0.05, 0.02, materials.brass, 0, 0, 0.325)
   sphere.add(latch)
@@ -433,11 +553,14 @@ export const buildPortraitSafe = (materials: Materials, tweens: Tweens): DeviceP
   safeRoot.add(safeDoorHinge)
   group.add(safeRoot)
 
-  // ---- 肖像画(蝶番で開く) ----
-  const portraitHinge = new THREE.Group()
-  portraitHinge.position.set(-7.2 + 0.52, 0, 2.42)
+  // ---- 肖像画(横にスライドして開く) ----
+  // 閉時、金庫の扉・ダイヤル・取っ手の出っ張り(z≈2.315 まで)を覆い隠せるよう、
+  // 壁から手前(室内側)へ 0.12 離して掛ける
+  const PORTRAIT_SLIDE_X = 1.05
+  const portraitSlide = new THREE.Group()
+  portraitSlide.position.set(-7.2, 0, 2.3)
   const portrait = new THREE.Group()
-  portrait.add(boxMesh(1.04, 1.3, 0.05, materials.brassDark, -0.52, 1.52, 0))
+  portrait.add(boxMesh(1.04, 1.3, 0.05, materials.brassDark, 0, 1.52, 0))
   const canvas = meshOf(
     new THREE.PlaneGeometry(0.92, 1.18),
     new THREE.MeshStandardMaterial({ map: portraitTexture(), roughness: 0.8 }),
@@ -445,10 +568,10 @@ export const buildPortraitSafe = (materials: Materials, tweens: Tweens): DeviceP
     false,
   )
   canvas.rotation.y = Math.PI
-  canvas.position.set(-0.52, 1.52, -0.028)
+  canvas.position.set(0, 1.52, -0.028)
   portrait.add(canvas)
-  portraitHinge.add(portrait)
-  group.add(portraitHinge)
+  portraitSlide.add(portrait)
+  group.add(portraitSlide)
 
   const portraitHit = hitbox(1.2, 1.5, 0.4, -7.2, 1.52, 2.35)
   const safeHit = hitbox(0.7, 0.7, 0.5, -7.2, 1.5, 2.3)
@@ -504,11 +627,12 @@ export const buildPortraitSafe = (materials: Materials, tweens: Tweens): DeviceP
       },
     ],
     sync(state) {
-      // 肖像画は部屋側(−z)へ開く
-      portraitHinge.rotation.y = state.flags.portraitOpen ? -1.85 : -0.045
+      // 肖像画は壁沿いに横へスライドして開く
+      portrait.position.x = state.flags.portraitOpen ? PORTRAIT_SLIDE_X : 0
       state.safeDials.forEach((value, i) => {
         const dial = safeDials[i]
-        // 正面(視点側)に現在値が来る位相(スクリーンショットで較正済み)
+        // 正面(視点側)に現在値が来る位相。Euler 順序 XYZ では z(横倒し)が先に
+        // 適用されるため、x 回転がドラムを自軸で回す(スクリーンショットで較正済み)
         if (dial) dial.rotation.x = (value / 10) * Math.PI * 2
       })
       insertedKey.visible = state.flags.safeKeyInserted
@@ -516,8 +640,8 @@ export const buildPortraitSafe = (materials: Materials, tweens: Tweens): DeviceP
     },
     onEvent(event) {
       if (event.kind === 'effect' && event.effect === 'portraitOpen') {
-        tweens.add(1.0, (t) => {
-          portraitHinge.rotation.y = -0.045 - (1.85 - 0.045) * t
+        tweens.add(0.8, (t) => {
+          portrait.position.x = PORTRAIT_SLIDE_X * t
         })
       }
       if (event.kind === 'effect' && event.effect === 'safeKeyIn') {

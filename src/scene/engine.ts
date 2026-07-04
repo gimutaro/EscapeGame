@@ -6,8 +6,6 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 
-export type Quality = 'high' | 'mid' | 'low'
-
 /** ビネット+フィルムグレイン(大正写真の質感・ごく薄く) */
 const FilmShader = {
   uniforms: {
@@ -51,7 +49,6 @@ export interface Engine {
   readonly scene: THREE.Scene
   readonly camera: THREE.PerspectiveCamera
   readonly canvas: HTMLCanvasElement
-  setQuality(quality: Quality): void
   render(dt: number): void
   onFrame(callback: (dt: number, time: number) => void): void
   start(): void
@@ -93,7 +90,6 @@ export const createEngine = (container: HTMLElement): Engine => {
   const film = new ShaderPass(FilmShader)
   composer.addPass(film)
 
-  let quality: Quality = 'high'
   let time = 0
   const frameCallbacks: Array<(dt: number, t: number) => void> = []
 
@@ -107,28 +103,6 @@ export const createEngine = (container: HTMLElement): Engine => {
   }
   window.addEventListener('resize', resize)
 
-  const setQuality = (q: Quality) => {
-    quality = q
-    renderer.shadowMap.enabled = q !== 'low'
-    bloom.enabled = q !== 'low'
-    film.enabled = q === 'high'
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, q === 'low' ? 1.25 : 2))
-    // 影の解像度は各ライト側で参照する
-    scene.traverse((obj) => {
-      const light = obj as THREE.Light
-      if (light.isLight === true && 'shadow' in light && light.shadow) {
-        const size = q === 'high' ? 2048 : q === 'mid' ? 1024 : 512
-        const shadow = light.shadow as THREE.LightShadow
-        shadow.mapSize.set(size, size)
-        if (shadow.map) {
-          shadow.map.dispose()
-          shadow.map = null
-        }
-      }
-    })
-    resize()
-  }
-
   const clock = new THREE.Clock()
 
   const engine: Engine = {
@@ -136,16 +110,11 @@ export const createEngine = (container: HTMLElement): Engine => {
     scene,
     camera,
     canvas: renderer.domElement,
-    setQuality,
     render(dt) {
       time += dt
       const timeUniform = film.uniforms['time']
       if (timeUniform) timeUniform.value = time % 100
-      if (quality === 'low') {
-        renderer.render(scene, camera)
-      } else {
-        composer.render()
-      }
+      composer.render()
     },
     onFrame(callback) {
       frameCallbacks.push(callback)

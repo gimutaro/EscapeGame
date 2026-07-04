@@ -98,14 +98,14 @@ export const buildWindow = (
   const group = new THREE.Group()
   const frameD = 0.1
   const frame = materials.woodDark
-  // 枠
+  // 枠 — 上下の枠と左右の柱が四隅で重なるため、柱側をわずかに薄くしてZファイティングを防ぐ
   group.add(boxMesh(width + 0.12, 0.07, frameD, frame, 0, height + 0.035, 0))
   group.add(boxMesh(width + 0.12, 0.09, frameD, frame, 0, -0.045, 0))
-  group.add(boxMesh(0.07, height + 0.14, frameD, frame, -width / 2 - 0.035, height / 2, 0))
-  group.add(boxMesh(0.07, height + 0.14, frameD, frame, width / 2 + 0.035, height / 2, 0))
-  // 桟(十字)
+  group.add(boxMesh(0.07, height + 0.14, frameD * 0.94, frame, -width / 2 - 0.035, height / 2, 0))
+  group.add(boxMesh(0.07, height + 0.14, frameD * 0.94, frame, width / 2 + 0.035, height / 2, 0))
+  // 桟(十字)— 交差部分の面が同一平面にならないよう、縦桟をわずかに薄くしてZファイティングを防ぐ
   group.add(boxMesh(width, 0.045, frameD * 0.7, frame, 0, height / 2, 0))
-  group.add(boxMesh(0.045, height, frameD * 0.7, frame, 0, height / 2, 0))
+  group.add(boxMesh(0.045, height, frameD * 0.66, frame, 0, height / 2, 0))
   // ガラス
   const glass = boxMesh(width, height, 0.01, materials.glass, 0, height / 2, 0)
   glass.castShadow = false

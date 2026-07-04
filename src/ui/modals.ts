@@ -3,7 +3,7 @@ import { availableHints } from '../core/hints'
 import { DOCUMENTS } from '../core/texts'
 import type { DocumentId } from '../core/types'
 import { button, clear, el } from './dom'
-import type { Settings, SettingsStore } from './settingsStore'
+import type { SettingsStore } from './settingsStore'
 
 export interface Modals {
   root: HTMLElement
@@ -52,7 +52,9 @@ export const createModals = (store: Store, settings: SettingsStore): Modals => {
     const entry = DOCUMENTS[doc]
     open('おぼえがき', (body) => {
       body.appendChild(el('div', 'doc-reader-title', `— ${entry.title} —`))
-      body.appendChild(el('div', 'doc-reader', entry.body))
+      const wrap = el('div', 'doc-reader-wrap')
+      wrap.appendChild(el('div', 'doc-reader', entry.body))
+      body.appendChild(wrap)
       const back = button('hint-more', 'いちらんへ戻る', () => openDocumentList())
       body.appendChild(back)
     })
@@ -76,47 +78,38 @@ export const createModals = (store: Store, settings: SettingsStore): Modals => {
   const openHints = () => {
     open('ヒント', (body) => {
       const state = store.getState()
-      const hints = availableHints(state)
-      if (hints.length === 0) {
+      const hint = availableHints(state)[0]
+      if (!hint) {
         body.appendChild(el('div', 'doc-empty', 'いま案内できる謎はない。次の扉が待っている。'))
         return
       }
-      body.appendChild(
-        el('div', 'doc-empty', 'ヒントは三段階。三つ目はほとんど答えです。何度でも無料。'),
-      )
-      for (const hint of hints) {
-        const item = el('div', 'hint-item')
-        const head = button('', `※ ${hint.title}`, () => {
-          item.classList.toggle('open')
-        })
-        const stages = el('div', 'hint-stages')
-        const renderStages = () => {
-          clear(stages)
-          const seen = store.getState().seenHints
-          const seenCount = ([0, 1, 2] as const).filter((s) =>
-            seen.includes(`${hint.id}:${s}`),
-          ).length
-          const visible = Math.max(seenCount, 0)
-          for (let s = 0; s < visible; s++) {
-            const stage = el('div', 'hint-stage')
-            stage.appendChild(el('span', 'label', `其の${['一', '二', '三'][s]}`))
-            stage.appendChild(document.createTextNode(hint.stages[s as 0 | 1 | 2]))
-            stages.appendChild(stage)
-          }
-          if (visible < 3) {
-            stages.appendChild(
-              button('hint-more', visible === 0 ? 'ヒントを見る' : 'もっと見る', () => {
-                store.dispatch({ type: 'HINT_VIEW', puzzle: hint.id, stage: visible as 0 | 1 | 2 })
-                renderStages()
-              }),
-            )
-          }
+      const item = el('div', 'hint-item open')
+      item.appendChild(el('div', 'hint-title', `※ ${hint.title}`))
+      const stages = el('div', 'hint-stages')
+      const renderStages = () => {
+        clear(stages)
+        const seen = store.getState().seenHints
+        const visible = ([0, 1, 2] as const).filter((s) =>
+          seen.includes(`${hint.id}:${s}`),
+        ).length
+        for (let s = 0; s < visible; s++) {
+          const stage = el('div', 'hint-stage')
+          stage.appendChild(el('span', 'label', `其の${['一', '二', '三'][s]}`))
+          stage.appendChild(document.createTextNode(hint.stages[s as 0 | 1 | 2]))
+          stages.appendChild(stage)
         }
-        renderStages()
-        item.appendChild(head)
-        item.appendChild(stages)
-        body.appendChild(item)
+        if (visible < 3) {
+          stages.appendChild(
+            button('hint-more', visible === 0 ? 'ヒントを見る' : 'もっと見る', () => {
+              store.dispatch({ type: 'HINT_VIEW', puzzle: hint.id, stage: visible as 0 | 1 | 2 })
+              renderStages()
+            }),
+          )
+        }
       }
+      renderStages()
+      item.appendChild(stages)
+      body.appendChild(item)
     })
   }
 
@@ -142,53 +135,6 @@ export const createModals = (store: Store, settings: SettingsStore): Modals => {
       }
       body.appendChild(settingRow('音楽の音量', slider(current.bgm, (v) => settings.set({ bgm: v }))))
       body.appendChild(settingRow('効果音の音量', slider(current.sfx, (v) => settings.set({ sfx: v }))))
-
-      const quality = el('select')
-      for (const [value, label] of [
-        ['high', '高(既定)'],
-        ['mid', '中'],
-        ['low', '低'],
-      ] as const) {
-        const option = el('option', '', label)
-        option.value = value
-        if (current.quality === value) option.selected = true
-        quality.appendChild(option)
-      }
-      quality.addEventListener('change', () =>
-        settings.set({ quality: quality.value as Settings['quality'] }),
-      )
-      body.appendChild(settingRow('画質', quality))
-
-      const sens = el('input')
-      sens.type = 'range'
-      sens.min = '0.5'
-      sens.max = '1.6'
-      sens.step = '0.1'
-      sens.value = String(current.sensitivity)
-      sens.addEventListener('input', () => settings.set({ sensitivity: Number(sens.value) }))
-      body.appendChild(settingRow('視点の速さ', sens))
-
-      const markers = el('input')
-      markers.type = 'checkbox'
-      markers.checked = current.markers
-      markers.addEventListener('change', () => settings.set({ markers: markers.checked }))
-      body.appendChild(settingRow('調べられる場所に光を表示', markers))
-
-      const speed = el('select')
-      for (const [value, label] of [
-        ['slow', 'ゆっくり'],
-        ['normal', 'ふつう'],
-        ['fast', 'はやい'],
-      ] as const) {
-        const option = el('option', '', label)
-        option.value = value
-        if (current.textSpeed === value) option.selected = true
-        speed.appendChild(option)
-      }
-      speed.addEventListener('change', () =>
-        settings.set({ textSpeed: speed.value as Settings['textSpeed'] }),
-      )
-      body.appendChild(settingRow('文字の速さ', speed))
 
       body.appendChild(
         button('danger-btn', 'はじめから(セーブデータを消す)', () => {

@@ -17,7 +17,6 @@ export interface CameraRig {
   focus(view: ViewId): void
   backToRoom(): void
   drag(dx: number, dy: number): void
-  setSensitivity(value: number): void
   update(dt: number): void
   /** タイトル画面用のゆっくりした揺れ */
   setIdleSway(enabled: boolean): void
@@ -33,7 +32,6 @@ export const createCameraRig = (camera: THREE.PerspectiveCamera): CameraRig => {
   let pitch = 0
   let yawVelocity = 0
   let pitchVelocity = 0
-  let sensitivity = 1
   let mode: RigMode = 'room'
   let currentView: ViewId | null = null
   let idleSway = false
@@ -137,13 +135,10 @@ export const createCameraRig = (camera: THREE.PerspectiveCamera): CameraRig => {
     },
     drag(dx, dy) {
       if (mode !== 'room') return
-      yawVelocity = -dx * 0.0032 * sensitivity
-      pitchVelocity = -dy * 0.0026 * sensitivity
+      yawVelocity = -dx * 0.0032
+      pitchVelocity = -dy * 0.0026
       yaw += yawVelocity
       pitch = THREE.MathUtils.clamp(pitch + pitchVelocity, -0.72, 0.72)
-    },
-    setSensitivity(value) {
-      sensitivity = value
     },
     update(dt) {
       if (transition) {

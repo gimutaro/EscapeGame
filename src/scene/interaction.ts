@@ -8,13 +8,13 @@ export interface InteractionEvents {
   onHotspotClick(id: HotspotId): void
   onDrag(dx: number, dy: number): void
   onDragOnHotspotArea?(id: HotspotId, dx: number, dy: number): boolean
+  onBackgroundClick?(): void
 }
 
 export interface Interaction {
   register(items: readonly Interactable[]): void
   setContext(context: InteractionContext): void
   setRoom(room: RoomId): void
-  setMarkersEnabled(enabled: boolean): void
   syncMarkers(state: GameState): void
   update(dt: number): void
   setEnabled(enabled: boolean): void
@@ -36,7 +36,6 @@ export const createInteraction = (
   let context: InteractionContext = 'room'
   let currentRoom: RoomId = 'living'
   let enabled = true
-  let markersEnabled = true
   let hovered: Interactable | null = null
   let lastState: GameState | null = null
 
@@ -60,6 +59,21 @@ export const createInteraction = (
         )
       : all.filter((i) => i.context === context)
 
+  const ownerOf = (object: THREE.Object3D, items: readonly Interactable[]): Interactable | null => {
+    let obj: THREE.Object3D | null = object
+    while (obj) {
+      const found = items.find((i) => i.object === obj)
+      if (found) return found
+      obj = obj.parent
+    }
+    return null
+  }
+
+  const volumeOf = (object: THREE.Object3D): number => {
+    const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3())
+    return size.x * size.y * size.z
+  }
+
   const pick = (clientX: number, clientY: number): Interactable | null => {
     const rect = canvas.getBoundingClientRect()
     pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1
@@ -68,15 +82,17 @@ export const createInteraction = (
     const items = activeItems()
     const objects = items.map((i) => i.object)
     const hits = raycaster.intersectObjects(objects, true)
+    const candidates: Interactable[] = []
     for (const hit of hits) {
-      let obj: THREE.Object3D | null = hit.object
-      while (obj) {
-        const found = items.find((i) => i.object === obj)
-        if (found) return found
-        obj = obj.parent
-      }
+      const owner = ownerOf(hit.object, items)
+      if (owner && !candidates.includes(owner)) candidates.push(owner)
     }
-    return null
+    const nearest = candidates[0] ?? null
+    if (!nearest || candidates.length === 1) return nearest
+    // 部屋ビューは距離順(手前優先)。注視ビューでは装置全体の当たり判定が
+    // ダイヤル等の小さな操作対象を包んでいるため、最小の当たり判定を優先する
+    if (context === 'room') return nearest
+    return candidates.reduce((best, c) => (volumeOf(c.object) < volumeOf(best.object) ? c : best))
   }
 
   // ポインタ操作(ドラッグ/クリック判別)
@@ -122,10 +138,13 @@ export const createInteraction = (
   const endPointer = (e: PointerEvent) => {
     if (!enabled || !down) return
     down = false
+    // 指はマウスよりぶれるので、タップ判定はタッチのとき緩める
+    const isTouch = e.pointerType === 'touch'
     const totalMove = Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY)
-    if (totalMove < 8 && moved < 24) {
+    if (totalMove < (isTouch ? 16 : 8) && moved < (isTouch ? 44 : 24)) {
       const hit = pick(e.clientX, e.clientY)
       if (hit) events.onHotspotClick(hit.id)
+      else events.onBackgroundClick?.()
     }
     dragTarget = null
   }
@@ -140,7 +159,6 @@ export const createInteraction = (
   const rebuildMarkers = () => {
     markerGroup.clear()
     markerMap.clear()
-    if (!markersEnabled) return
     for (const item of activeItems()) {
       if (item.context !== 'room') continue
       // マテリアルは共有(clone しない: ビュー切替のたびに増えるのを防ぐ)
@@ -175,10 +193,6 @@ export const createInteraction = (
     setRoom(room) {
       currentRoom = room
       hovered = null
-      rebuildMarkers()
-    },
-    setMarkersEnabled(value) {
-      markersEnabled = value
       rebuildMarkers()
     },
     syncMarkers(state) {

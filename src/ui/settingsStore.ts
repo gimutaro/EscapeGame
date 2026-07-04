@@ -3,10 +3,6 @@ import { z } from 'zod'
 const SettingsSchema = z.object({
   bgm: z.number().min(0).max(1),
   sfx: z.number().min(0).max(1),
-  quality: z.enum(['high', 'mid', 'low']),
-  sensitivity: z.number().min(0.5).max(1.6),
-  markers: z.boolean(),
-  textSpeed: z.enum(['slow', 'normal', 'fast']),
 })
 
 export type Settings = z.infer<typeof SettingsSchema>
@@ -14,10 +10,6 @@ export type Settings = z.infer<typeof SettingsSchema>
 const DEFAULTS: Settings = {
   bgm: 0.5,
   sfx: 0.7,
-  quality: 'high',
-  sensitivity: 1,
-  markers: true,
-  textSpeed: 'normal',
 }
 
 const KEY = 'kuonji.settings.v1'

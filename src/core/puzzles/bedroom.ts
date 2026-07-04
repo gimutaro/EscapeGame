@@ -6,6 +6,9 @@ import { addDocument, addItem, msg, result, setFlag } from '../helpers'
 
 /** B-1 鏡台(屏風の鏡文字が読める) */
 export const examineVanity = (state: GameState): ReduceResult => {
+  if (state.flags.mirrorSeen) {
+    return result(state, msg('鏡に、部屋の屏風が映り込んでいる。——おぼえがきに書き留めた。'))
+  }
   const next = addDocument(setFlag(state, 'mirrorSeen'), 'mirrorText')
   return result(
     next,
@@ -42,8 +45,11 @@ export const examineKimono = (state: GameState): ReduceResult => {
   if (!state.flags.wardrobeOpen) {
     return result(state, msg('箪笥の扉が閉まっている。'))
   }
-  const next = addDocument(setFlag(state, 'kimonoSeen'), 'kimonoNote')
-  return result(next, { kind: 'document', doc: 'kimonoNote' })
+  const next = setFlag(state, 'kimonoSeen')
+  return result(
+    next,
+    msg('咲子の訪問着。裾から肩へ、桜、梅、菊の花が描かれている。——それぞれ、いくつ咲いているだろう。'),
+  )
 }
 
 /** B-3 宝石箱 */
@@ -53,7 +59,7 @@ export const examineJewelryBox = (state: GameState): ReduceResult => {
   }
   return result(
     state,
-    msg('花の彫られたダイヤルが三つ付いた宝石箱。彫刻は左から、桜、梅、菊。'),
+    msg('花の彫られたダイヤルが三つ付いた宝石箱。彫刻は左から、桜、梅、菊。窓に数字を合わせ、蓋の「開ける」の留め金を押す仕組みらしい。'),
   )
 }
 
@@ -72,7 +78,7 @@ export const openJewelry = (state: GameState): ReduceResult => {
     return result(
       state,
       { kind: 'sfx', sfx: 'lockedRattle' },
-      msg('留め金は開かない。数字が違うようだ。'),
+      msg('「開ける」を押しても、留め金は外れない。数字が違うようだ。'),
     )
   }
   if (state.inventory.length + 2 > INVENTORY_CAPACITY) return result(state, msg(T.inventoryFull))
@@ -89,6 +95,9 @@ export const openJewelry = (state: GameState): ReduceResult => {
 
 /** B-4 咲子の日記 */
 export const examineSideTable = (state: GameState): ReduceResult => {
+  if (state.flags.diaryRead) {
+    return result(state, msg('咲子の日記。ランプの隣に置かれている。'))
+  }
   const next = addDocument(setFlag(state, 'diaryRead'), 'diary')
   return result(next, { kind: 'sfx', sfx: 'paper' }, { kind: 'document', doc: 'diary' })
 }
@@ -97,4 +106,4 @@ export const examineBed = (state: GameState): ReduceResult =>
   result(state, msg('真鍮枠の寝台。長く使われていないはずなのに、埃ひとつない。'))
 
 export const examineBedroomWindow = (state: GameState): ReduceResult =>
-  result(state, msg('レースのカーテン越しに、月。庭の木々が静かに揺れている。'))
+  result(state, msg('レースのカーテン越しに、庭の木々が静かに揺れている。'))

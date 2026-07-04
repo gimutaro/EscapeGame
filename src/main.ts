@@ -1,4 +1,5 @@
 import './ui/style.css'
+import * as THREE from 'three'
 import type { Action } from './core/actions'
 import type { GameEvent } from './core/events'
 import type { GameState } from './core/state'
@@ -37,6 +38,7 @@ declare global {
       focus?: (view: string) => void
       back?: () => void
       camera?: () => { position: number[]; mode: string; view: string | null }
+      project?: (x: number, y: number, z: number) => { x: number; y: number }
     }
   }
 }
@@ -116,6 +118,7 @@ const boot = (): void => {
   ui.appendChild(story.root)
   ui.appendChild(result.root)
   ui.appendChild(modals.root)
+  ui.appendChild(el('div', 'rotate-hint', '横向きにすると遊びやすくなります'))
   ui.appendChild(fade.root)
 
   // --- 操作 ---
@@ -123,6 +126,7 @@ const boot = (): void => {
     onHotspotClick: (id) => router.handleClick(id),
     onDrag: (dx, dy) => rig.drag(dx, dy),
     onDragOnHotspotArea: (id, dx, dy) => router.handleDragOnHotspot(id, dx, dy),
+    onBackgroundClick: () => messages.dismiss(),
   })
   interaction.register(world.interactables)
   const router = createRouter(store, rig, interaction, world, fade, hud)
@@ -134,10 +138,6 @@ const boot = (): void => {
   // --- 設定の反映 ---
   settings.subscribe((value) => {
     audio.setVolumes(value.bgm, value.sfx)
-    engine.setQuality(value.quality)
-    rig.setSensitivity(value.sensitivity)
-    interaction.setMarkersEnabled(value.markers)
-    messages.setSpeed(value.textSpeed)
   })
 
   // --- フェーズ遷移 ---
@@ -277,6 +277,13 @@ const boot = (): void => {
       mode: rig.mode(),
       view: rig.currentView(),
     }),
+    project: (x, y, z) => {
+      const v = new THREE.Vector3(x, y, z).project(engine.camera)
+      return {
+        x: ((v.x + 1) / 2) * window.innerWidth,
+        y: ((1 - v.y) / 2) * window.innerHeight,
+      }
+    },
   }
 }
 

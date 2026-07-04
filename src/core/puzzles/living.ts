@@ -33,6 +33,9 @@ export const examineSofa = (state: GameState): ReduceResult => {
 
 /** 子爵の手紙(ローテーブル) */
 export const examineLowTable = (state: GameState): ReduceResult => {
+  if (state.flags.letterRead) {
+    return result(state, msg('子爵の手紙。ローテーブルに置かれている。'))
+  }
   const next = addDocument(setFlag(state, 'letterRead'), 'viscountLetter')
   return result(next, { kind: 'sfx', sfx: 'paper' }, { kind: 'document', doc: 'viscountLetter' })
 }

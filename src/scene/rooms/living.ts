@@ -41,11 +41,11 @@ export const buildLiving = (materials: Materials, tweens: Tweens): RoomModule =>
   south.position.set(0, 0, D / 2)
   group.add(south)
 
-  // 南側の窓(臙脂のカーテン)
+  // 南側の窓(臙脂のカーテン)— 壁からのオフセットは枠の前面が壁面と同一平面にならない値にする(Zファイティング防止)
   for (const x of [-2.55, 2.55]) {
     const window = buildWindow(1.14, 1.76, materials, { curtainColor: '#6e2836', seed: 82 + x })
     window.rotation.y = Math.PI
-    window.position.set(x, 0.85, D / 2 - 0.02)
+    window.position.set(x, 0.85, D / 2 - 0.035)
     group.add(window)
   }
 
@@ -121,8 +121,9 @@ export const buildLiving = (materials: Materials, tweens: Tweens): RoomModule =>
   }
   group.add(sofa)
 
+  // カメラ位置(z=0.55)の真下に来て気づきにくかったため、暖炉寄り(-z側)へ動かす
   const table = new THREE.Group()
-  table.position.set(0, 0, 0.2)
+  table.position.set(0, 0, -0.5)
   table.add(boxMesh(1.15, 0.05, 0.62, materials.woodRed, 0, 0.44, 0))
   table.add(boxMesh(1.0, 0.04, 0.5, materials.woodDark, 0, 0.24, 0))
   for (const [lx, lz] of [
@@ -155,6 +156,7 @@ export const buildLiving = (materials: Materials, tweens: Tweens): RoomModule =>
   group.add(table)
 
   // 蓄音機
+  // ラッパの向きを反対側にする(体裁はそのまま、ラッパと取っ手だけ左右反転させる)
   const gramophone = new THREE.Group()
   gramophone.position.set(3.5, 0, 1.6)
   gramophone.add(boxMesh(0.6, 0.72, 0.5, materials.woodRed, 0, 0.36, 0))
@@ -164,14 +166,19 @@ export const buildLiving = (materials: Materials, tweens: Tweens): RoomModule =>
     const t = i / 10
     hornPoints.push(new THREE.Vector2(0.02 + Math.pow(t, 2.2) * 0.26, t * 0.42))
   }
-  const horn = meshOf(new THREE.LatheGeometry(hornPoints, 20), materials.brass)
-  horn.rotation.z = -0.9
+  // 片面(外側)しか生成されない形状のため、向きを変えると内側の非表示面が
+  // カメラを向いてしまう。両面描画にして、どちら向きでも見えるようにする
+  const horn = meshOf(
+    new THREE.LatheGeometry(hornPoints, 20),
+    new THREE.MeshStandardMaterial({ color: materials.brass.color, metalness: 0.88, roughness: 0.32, side: THREE.DoubleSide }),
+  )
+  horn.rotation.z = 0.9
   horn.rotation.x = 0.2
-  horn.position.set(-0.05, 0.95, 0)
+  horn.position.set(0.05, 0.95, 0)
   gramophone.add(horn)
   const crank = cylinderMesh(0.012, 0.012, 0.16, materials.brassDark, 8)
   crank.rotation.z = Math.PI / 2
-  crank.position.set(0.34, 0.6, 0)
+  crank.position.set(-0.34, 0.6, 0)
   gramophone.add(crank)
   group.add(gramophone)
 
@@ -201,24 +208,6 @@ export const buildLiving = (materials: Materials, tweens: Tweens): RoomModule =>
   }
   group.add(chandelier)
 
-  // 壁掛け燭台(暖炉の両脇)
-  const sconceMaterial = new THREE.MeshStandardMaterial({
-    color: '#ffedca',
-    emissive: '#ffb054',
-    emissiveIntensity: 1.2,
-  })
-  for (const x of [-1.35, 1.35]) {
-    const sconce = new THREE.Group()
-    sconce.position.set(x, 2.25, -2.88)
-    sconce.add(boxMesh(0.05, 0.2, 0.03, materials.brassDark, 0, -0.1, 0))
-    const shade = meshOf(new THREE.SphereGeometry(0.05, 10, 8), sconceMaterial, false, false)
-    sconce.add(shade)
-    group.add(sconce)
-    const glow = new THREE.PointLight('#ffbe70', 1.6, 4, 2)
-    glow.position.set(x, 2.2, -2.5)
-    group.add(glow)
-  }
-
   // 主照明
   const mainLight = new THREE.PointLight('#ffc98a', 40, 0, 2)
   mainLight.position.set(0, 2.95, 0.2)
@@ -245,7 +234,7 @@ export const buildLiving = (materials: Materials, tweens: Tweens): RoomModule =>
 
   // 当たり判定
   const sofaHit = hitbox(2.3, 1.1, 1.1, 0, 0.55, 1.45)
-  const tableHit = hitbox(1.3, 0.5, 0.8, 0, 0.35, 0.2)
+  const tableHit = hitbox(1.3, 0.5, 0.8, 0, 0.35, -0.5)
   const gramophoneHit = hitbox(0.9, 1.5, 0.8, 3.5, 0.7, 1.6)
   const entranceHit = hitbox(2.1, 2.7, 0.5, 0, 1.3, D / 2 - 0.1)
   const windowHit = hitbox(1.3, 1.9, 0.4, -2.55, 1.75, D / 2 - 0.15)
@@ -259,7 +248,7 @@ export const buildLiving = (materials: Materials, tweens: Tweens): RoomModule =>
       context: 'room',
       rooms: ['living'],
       view: 'fv-table',
-      markerAt: new THREE.Vector3(-0.15, 0.55, 0.15),
+      markerAt: new THREE.Vector3(-0.15, 0.55, -0.55),
     },
     { id: 'lowTable', object: cloneHit(tableHit, group), context: 'fv-table' },
     { id: 'sofa', object: cloneHit(sofaHit, group), context: 'fv-table' },
@@ -291,8 +280,8 @@ export const buildLiving = (materials: Materials, tweens: Tweens): RoomModule =>
     {
       id: 'fv-table',
       room: 'living',
-      position: new THREE.Vector3(0, 1.45, 1.15),
-      lookAt: new THREE.Vector3(-0.05, 0.48, 0.12),
+      position: new THREE.Vector3(0, 1.45, 0.45),
+      lookAt: new THREE.Vector3(-0.05, 0.48, -0.58),
     },
     ...devices.flatMap((device) => device.views),
   ]

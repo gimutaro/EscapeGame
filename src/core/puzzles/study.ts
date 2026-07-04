@@ -44,13 +44,12 @@ export const toggleStudyLight = (state: GameState): ReduceResult => {
     return result(toggled, { kind: 'effect', effect: 'lightsOn' }, { kind: 'sfx', sfx: 'switch' })
   }
   if (!state.flags.glowSeen) {
-    const next = addDocument(setFlag(toggled, 'glowSeen'), 'glowText')
+    const next = setFlag(toggled, 'glowSeen')
     return result(
       next,
       { kind: 'effect', effect: 'lightsOff' },
       { kind: 'sfx', sfx: 'switch' },
       msg('明かりが落ちると——机の上の壁に、淡く光る文字が浮かんだ。'),
-      { kind: 'document', doc: 'glowText' },
     )
   }
   return result(toggled, { kind: 'effect', effect: 'lightsOff' }, { kind: 'sfx', sfx: 'switch' })
@@ -137,7 +136,7 @@ export const examinePortrait = (state: GameState): ReduceResult => {
     next,
     { kind: 'effect', effect: 'portraitOpen' },
     { kind: 'sfx', sfx: 'doorOpen' },
-    msg('肖像画の額に手を掛けると、蝶番でゆっくりと開いた。——壁の窪みに、金庫だ。'),
+    msg('肖像画の額に手を掛けると、壁に沿ってすっと横へ滑った。——壁の窪みに、金庫だ。'),
   )
 }
 

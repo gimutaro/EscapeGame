@@ -13,12 +13,19 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { height: 100%; overflow: hidden; background: #06070c; }
-body { font-family: var(--mincho); color: var(--paper); }
+html, body { height: 100%; overflow: hidden; background: #06070c; overscroll-behavior: none; }
+body {
+  font-family: var(--mincho); color: var(--paper);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
 #app { position: fixed; inset: 0; }
-#app canvas { display: block; }
+#app canvas { display: block; touch-action: none; }
 .hidden { display: none !important; }
 button { font-family: var(--mincho); cursor: pointer; }
+.modal-body, .doc-reader, .confirm-text { user-select: text; -webkit-user-select: text; }
 
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
 #ui > * { pointer-events: auto; }
@@ -26,7 +33,9 @@ button { font-family: var(--mincho); cursor: pointer; }
 
 /* ---------- HUD ---------- */
 .hud-top {
-  position: absolute; top: 14px; right: 14px;
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  right: calc(14px + env(safe-area-inset-right, 0px));
   display: flex; gap: 8px;
 }
 .hud-btn {
@@ -43,21 +52,28 @@ button { font-family: var(--mincho); cursor: pointer; }
 .hud-btn:hover { background: rgba(60, 44, 24, 0.85); border-color: var(--brass); }
 
 .back-btn {
-  position: absolute; bottom: 108px; left: 50%; transform: translateX(-50%);
+  position: absolute;
+  top: calc(68px + env(safe-area-inset-top, 0px));
+  right: calc(70px + env(safe-area-inset-right, 0px));
   background: var(--lacquer-soft);
-  border: 1px solid var(--brass-dim);
-  color: var(--paper);
-  padding: 9px 34px;
+  border: 1px solid var(--brass);
+  color: var(--brass);
+  padding: 9px 15px;
   font-size: 14px;
-  letter-spacing: 0.3em;
-  border-radius: 2px;
+  letter-spacing: 0.14em;
+  border-radius: 3px;
   backdrop-filter: blur(3px);
+  box-shadow: 0 0 10px rgba(201, 163, 78, 0.3);
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
 }
-.back-btn:hover { border-color: var(--brass); }
+.back-btn::before { content: '←'; margin-right: 8px; }
+.back-btn:hover { background: rgba(60, 44, 24, 0.85); color: var(--paper); box-shadow: 0 0 14px rgba(201, 163, 78, 0.45); }
 
 /* ---------- インベントリ ---------- */
 .inventory {
-  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  position: absolute;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  left: 50%; transform: translateX(-50%);
   display: flex; gap: 7px;
   padding: 8px 10px;
   background: var(--lacquer-soft);
@@ -199,7 +215,7 @@ button { font-family: var(--mincho); cursor: pointer; }
   color: var(--ink-soft); font-size: 13px; padding: 4px 12px; letter-spacing: 0.2em;
 }
 .modal-close:hover { border-color: var(--accent); color: var(--accent); }
-.modal-body { padding: 16px 22px 22px; overflow-y: auto; }
+.modal-body { padding: 14px 20px 18px; overflow-y: auto; }
 
 /* 文書リスト */
 .doc-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
@@ -216,13 +232,17 @@ button { font-family: var(--mincho); cursor: pointer; }
 .doc-card:hover { background: rgba(255, 248, 226, 0.9); border-color: var(--accent); }
 .doc-empty { color: var(--ink-soft); font-size: 14px; padding: 18px 4px; }
 
-/* 文書リーダー(縦書き) */
+/* 文書リーダー(縦書き)— 本文の分量に応じて幅が縮み、右詰め・中央に置かれる */
+.doc-reader-wrap {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+}
 .doc-reader {
   writing-mode: vertical-rl;
-  min-height: 300px;
-  max-height: 56vh;
-  overflow-x: auto;
-  padding: 18px 8px;
+  flex: 0 0 auto;
+  max-height: 50vh;
+  padding: 10px 4px;
   font-size: 16px;
   line-height: 2.3;
   letter-spacing: 0.12em;
@@ -235,12 +255,10 @@ button { font-family: var(--mincho); cursor: pointer; }
 }
 
 /* ヒント */
-.hint-item { border-bottom: 1px dashed rgba(138, 109, 51, 0.45); padding: 12px 2px; }
-.hint-item > button {
-  width: 100%; text-align: left; background: none; border: none;
+.hint-item { padding: 12px 2px; }
+.hint-title {
   font-size: 15px; letter-spacing: 0.16em; color: var(--ink); padding: 4px 0;
 }
-.hint-item > button:hover { color: var(--accent); }
 .hint-stages { padding: 6px 12px 4px; display: none; }
 .hint-item.open .hint-stages { display: block; }
 .hint-stage { margin: 8px 0; font-size: 14px; line-height: 1.9; }
@@ -417,7 +435,7 @@ button { font-family: var(--mincho); cursor: pointer; }
 
 /* アイテム拡大ビュー */
 .item-viewer { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.item-viewer canvas { border: 1px solid rgba(138, 109, 51, 0.4); background: rgba(14, 10, 7, 0.9); border-radius: 2px; cursor: grab; }
+.item-viewer canvas { border: 1px solid rgba(138, 109, 51, 0.4); background: rgba(14, 10, 7, 0.9); border-radius: 2px; cursor: grab; touch-action: none; max-width: 100%; }
 .item-viewer .item-name { font-size: 17px; letter-spacing: 0.3em; color: var(--ink); }
 .item-viewer .item-desc { font-size: 14px; line-height: 2; color: var(--ink-soft); max-width: 420px; text-align: center; }
 .combine-btn {
@@ -440,14 +458,40 @@ button { font-family: var(--mincho); cursor: pointer; }
 }
 .confirm-actions .yes { border-color: #a0433f; color: #a0433f; }
 
+/* 縦持ちの横向き推奨(小画面のみ・操作は妨げない) */
+.rotate-hint { display: none; }
+@media (orientation: portrait) and (max-width: 720px) {
+  .rotate-hint {
+    display: block;
+    position: absolute;
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    left: 50%; transform: translateX(-50%);
+    background: var(--lacquer-soft);
+    border: 1px solid var(--brass-dim);
+    border-radius: 2px;
+    padding: 6px 14px;
+    font-size: 11px; letter-spacing: 0.18em;
+    color: rgba(240, 230, 208, 0.85);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 20;
+  }
+}
+
 /* モバイル調整 */
 @media (max-width: 720px) {
   .slot { width: 46px; height: 46px; }
+  .slot-name { bottom: 52px; }
   .hud-btn { padding: 7px 10px; font-size: 12px; }
-  .message { font-size: 13px; bottom: 80px; padding: 10px 14px; }
-  .back-btn { bottom: 84px; padding: 8px 24px; }
+  .message { font-size: 13px; bottom: 80px; padding: 10px 14px; max-width: 92vw; min-width: 0; }
+  .back-btn { padding: 10px 18px; font-size: 14px; top: calc(60px + env(safe-area-inset-top, 0px)); right: calc(14px + env(safe-area-inset-right, 0px)); }
   .clock-controls { bottom: 140px; }
+  .dial-btn { width: 46px; height: 46px; }
   .title-inner { flex-direction: column; gap: 30px; }
   .title-text { margin: 0; max-height: 46vh; }
   .doc-reader { font-size: 14px; }
+  .modal { max-height: 88vh; }
+  .modal-body { padding: 12px 14px 16px; }
+  .result-panel { padding: 30px 24px; width: min(440px, 94vw); }
+  .setting-row input[type='range'] { width: 150px; }
 }

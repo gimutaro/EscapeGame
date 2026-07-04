@@ -40,11 +40,11 @@ describe('S-2 写真の結合(任意)', () => {
 })
 
 describe('S-3 照明と夜光文字', () => {
-  it('初回消灯で夜光文字が記録される', () => {
+  it('初回消灯で夜光文字を見たことが記録される(覚書には残らない)', () => {
     const { state } = step(inStudy, { type: 'TOGGLE_STUDY_LIGHT' })
     expect(state.studyLightOn).toBe(false)
     expect(state.flags.glowSeen).toBe(true)
-    expect(state.documents).toContain('glowText')
+    expect(state.documents).toEqual(inStudy.documents)
   })
   it('何度でも点け直せる(トグル)', () => {
     const off = step(inStudy, { type: 'TOGGLE_STUDY_LIGHT' }).state

@@ -1,4 +1,4 @@
-import { KIMONO_FLOWERS, NOTE_LABELS, MELODY } from './constants'
+import { NOTE_LABELS, MELODY } from './constants'
 import type { DocumentId, ItemId } from './types'
 
 /** 文書(おぼえがき)全文 — docs/03-puzzle-design.md §6 準拠 */
@@ -24,10 +24,6 @@ export const DOCUMENTS: Readonly<Record<DocumentId, { title: string; body: strin
     title: '屏風の言葉(鏡写し)',
     body: '鏡に映った屏風には、こう読めた。\n\n「たんすの着物、花を数えよ」',
   },
-  kimonoNote: {
-    title: '着物の花',
-    body: `咲子の訪問着。裾から肩へ、花が描かれている。\n\n桜が${KIMONO_FLOWERS.sakura}輪、梅が${KIMONO_FLOWERS.ume}輪、菊が${KIMONO_FLOWERS.kiku}輪。`,
-  },
   diary: {
     title: '咲子の日記',
     body: [
@@ -41,10 +37,6 @@ export const DOCUMENTS: Readonly<Record<DocumentId, { title: string; body: strin
   melodyNote: {
     title: 'オルゴールの旋律',
     body: `オルゴールが奏でた旋律。\n\n「${MELODY.map((n) => NOTE_LABELS[n]).join('・')}」\n\n蓋の裏にも、同じ音名が刻まれている。`,
-  },
-  glowText: {
-    title: '夜光の文字',
-    body: '明かりを消すと、机の上の壁に淡く光る文字が浮かんだ。\n\n「地球儀を回せ。日出づる国を正面に。」',
   },
   memorandum: {
     title: '覚書',

@@ -30,12 +30,11 @@ describe('B-1 鏡台と屏風', () => {
 })
 
 describe('B-2 箪笥と着物', () => {
-  it('箪笥を開けてから着物を調べると花の数が記録される', () => {
+  it('箪笥を開けてから着物を調べると既読フラグが立つ', () => {
     const opened = step(inBedroom, { type: 'EXAMINE', target: 'wardrobe' }).state
     expect(opened.flags.wardrobeOpen).toBe(true)
     const { state } = step(opened, { type: 'EXAMINE', target: 'kimono' })
     expect(state.flags.kimonoSeen).toBe(true)
-    expect(state.documents).toContain('kimonoNote')
   })
   it('箪笥が閉まっていると着物は調べられない', () => {
     const { state } = step(inBedroom, { type: 'EXAMINE', target: 'kimono' })

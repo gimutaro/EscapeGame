@@ -53,7 +53,8 @@ export const createAudioSystem = (): AudioSystem => {
   let bgmGain: GainNode | null = null
   let sfxGain: GainNode | null = null
   let ambGain: GainNode | null = null
-  let delaySend: GainNode | null = null
+  let bgmDelaySend: GainNode | null = null
+  let sfxDelaySend: GainNode | null = null
   let noiseBuffer: AudioBuffer | null = null
   let volumes = { bgm: 0.5, sfx: 0.7 }
 
@@ -77,7 +78,7 @@ export const createAudioSystem = (): AudioSystem => {
     ambGain = ctx.createGain()
     ambGain.gain.value = volumes.sfx * 0.5
     ambGain.connect(master)
-    // オルゴールの残響(フィードバックディレイ)
+    // オルゴールの残響(フィードバックディレイ)— BGM分・効果音分を別々の音量で送る
     const delay = ctx.createDelay(1)
     delay.delayTime.value = 0.27
     const feedback = ctx.createGain()
@@ -88,9 +89,12 @@ export const createAudioSystem = (): AudioSystem => {
     feedback.connect(delay)
     delay.connect(wet)
     wet.connect(master)
-    delaySend = ctx.createGain()
-    delaySend.gain.value = 1
-    delaySend.connect(delay)
+    bgmDelaySend = ctx.createGain()
+    bgmDelaySend.gain.value = volumes.bgm
+    bgmDelaySend.connect(delay)
+    sfxDelaySend = ctx.createGain()
+    sfxDelaySend.gain.value = volumes.sfx
+    sfxDelaySend.connect(delay)
     // ノイズバッファ
     noiseBuffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate)
     const data = noiseBuffer.getChannelData(0)
@@ -101,7 +105,7 @@ export const createAudioSystem = (): AudioSystem => {
   /** オルゴールのベル音(FM合成) */
   const bell = (freq: number, at: number, dur = 1.6, gain = 0.22, toBgm = false) => {
     const audio = ensure()
-    if (!audio || !sfxGain || !bgmGain || !delaySend) return
+    if (!audio || !sfxGain || !bgmGain || !bgmDelaySend || !sfxDelaySend) return
     const carrier = audio.createOscillator()
     carrier.frequency.value = freq
     const modulator = audio.createOscillator()
@@ -117,7 +121,7 @@ export const createAudioSystem = (): AudioSystem => {
     env.gain.exponentialRampToValueAtTime(0.0004, at + dur)
     carrier.connect(env)
     env.connect(toBgm ? bgmGain : sfxGain)
-    env.connect(delaySend)
+    env.connect(toBgm ? bgmDelaySend : sfxDelaySend)
     carrier.start(at)
     carrier.stop(at + dur + 0.1)
     modulator.start(at)
@@ -322,9 +326,8 @@ export const createAudioSystem = (): AudioSystem => {
   }
 
   // ---- 環境音 ----
-  const ambience = { fire: false, crickets: false, pendulum: false }
+  const ambience = { fire: false }
   let ambTimer: ReturnType<typeof setInterval> | null = null
-  let pendulumPhase = 0
 
   const ambientTick = () => {
     const audio = ensure()
@@ -351,35 +354,6 @@ export const createAudioSystem = (): AudioSystem => {
         source.stop(at + 0.08)
       }
     }
-    if (ambience.crickets && Math.random() < 0.4) {
-      const at = t + Math.random() * 0.2
-      for (let i = 0; i < 2; i++) {
-        const osc = audio.createOscillator()
-        osc.frequency.value = 4200 + Math.random() * 300
-        const env = audio.createGain()
-        env.gain.setValueAtTime(0, at + i * 0.09)
-        env.gain.linearRampToValueAtTime(0.016, at + i * 0.09 + 0.02)
-        env.gain.exponentialRampToValueAtTime(0.0004, at + i * 0.09 + 0.07)
-        osc.connect(env)
-        env.connect(ambGain)
-        osc.start(at + i * 0.09)
-        osc.stop(at + i * 0.09 + 0.1)
-      }
-    }
-    if (ambience.pendulum) {
-      pendulumPhase++
-      if (pendulumPhase % 4 === 0) {
-        const osc = audio.createOscillator()
-        osc.frequency.value = pendulumPhase % 8 === 0 ? 820 : 700
-        const env = audio.createGain()
-        env.gain.setValueAtTime(0.03, t)
-        env.gain.exponentialRampToValueAtTime(0.0004, t + 0.06)
-        osc.connect(env)
-        env.connect(ambGain)
-        osc.start(t)
-        osc.stop(t + 0.08)
-      }
-    }
   }
 
   return {
@@ -393,6 +367,8 @@ export const createAudioSystem = (): AudioSystem => {
       if (bgmGain) bgmGain.gain.value = bgm * 0.5
       if (sfxGain) sfxGain.gain.value = sfx
       if (ambGain) ambGain.gain.value = sfx * 0.5
+      if (bgmDelaySend) bgmDelaySend.gain.value = bgm
+      if (sfxDelaySend) sfxDelaySend.gain.value = sfx
     },
     playSfx,
     playNote(note: Note) {
@@ -411,9 +387,6 @@ export const createAudioSystem = (): AudioSystem => {
     setBgm,
     syncAmbience(state) {
       ambience.fire = state.phase === 'playing' && state.flags.fireplaceLit && state.currentRoom === 'living'
-      ambience.crickets = state.phase === 'playing'
-      ambience.pendulum =
-        state.phase === 'playing' && state.flags.clockSolved && state.currentRoom === 'living'
     },
   }
 }

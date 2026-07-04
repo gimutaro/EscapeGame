@@ -2,82 +2,83 @@ import { MELODY, NOTE_LABELS } from '../core/constants'
 import type { ItemId } from '../core/types'
 import { ITEMS } from '../core/texts'
 import { el } from './dom'
-import type { Settings } from './settingsStore'
 
-const CHAR_MS: Record<Settings['textSpeed'], number> = { slow: 64, normal: 34, fast: 10 }
+const CHAR_MS = 34
 
-/** メッセージウィンドウ(タイプライタ表示・クリックで送り) */
+/** メッセージウィンドウ(タイプライタ表示)
+ *  自動では消えない。同じ内容がもう一度来たら閉じる(=同じ場所の再クリックで消える)。
+ *  違う内容が来たら置き換え、ウィンドウ自体のクリックでも閉じられる。 */
 export interface Messages {
   root: HTMLElement
   push(text: string): void
-  setSpeed(speed: Settings['textSpeed']): void
   clear(): void
+  /** 画面のどこをクリックしても呼ぶ: 表示途中なら全文表示、表示済みなら閉じる */
+  dismiss(): void
 }
 
 export const createMessages = (): Messages => {
   const root = el('div', 'message hidden')
-  const queue: string[] = []
   let typing: ReturnType<typeof setInterval> | null = null
-  let hideTimer: ReturnType<typeof setTimeout> | null = null
   let current = ''
   let shown = 0
-  let speed: Settings['textSpeed'] = 'normal'
 
   const stopTyping = () => {
     if (typing) clearInterval(typing)
     typing = null
   }
 
-  const showNext = () => {
-    if (hideTimer) clearTimeout(hideTimer)
-    hideTimer = null
-    const next = queue.shift()
-    if (next === undefined) {
-      root.classList.add('hidden')
-      return
-    }
-    current = next
+  const hide = () => {
+    stopTyping()
+    current = ''
+    root.classList.add('hidden')
+  }
+
+  const show = (text: string) => {
+    stopTyping()
+    current = text
     shown = 0
     root.textContent = ''
     root.classList.remove('hidden')
-    stopTyping()
     typing = setInterval(() => {
       shown++
       root.textContent = current.slice(0, shown)
-      if (shown >= current.length) {
-        stopTyping()
-        hideTimer = setTimeout(showNext, 2800)
-      }
-    }, CHAR_MS[speed])
+      if (shown >= current.length) stopTyping()
+    }, CHAR_MS)
   }
 
-  root.addEventListener('click', () => {
+  const dismiss = () => {
+    if (root.classList.contains('hidden')) return
     if (typing) {
-      // 表示中なら全文表示
+      // 表示途中なら全文表示
       stopTyping()
       root.textContent = current
-      hideTimer = setTimeout(showNext, 2200)
     } else {
-      showNext()
+      hide()
     }
-  })
+  }
+
+  root.addEventListener('click', dismiss)
 
   return {
     root,
+    dismiss,
     push(text) {
-      queue.push(text)
-      // 溜まりすぎた古い文は流す(連打時に何十秒も残らないように)
-      while (queue.length > 3) queue.shift()
-      if (root.classList.contains('hidden')) showNext()
-    },
-    setSpeed(value) {
-      speed = value
+      const visible = !root.classList.contains('hidden')
+      if (visible && text === current) {
+        if (typing) {
+          // 表示途中の再クリックは全文表示
+          stopTyping()
+          root.textContent = current
+        } else {
+          // 表示済みの同じ内容をもう一度 → 閉じる
+          hide()
+        }
+        return
+      }
+      show(text)
     },
     clear() {
-      queue.length = 0
-      stopTyping()
-      if (hideTimer) clearTimeout(hideTimer)
-      root.classList.add('hidden')
+      hide()
     },
   }
 }

@@ -8,7 +8,7 @@ import { boxMesh, cylinderMesh, hitbox, meshOf } from '../materials'
 import { buildCeiling, buildFloor, buildWall, buildWindow } from '../roomShell'
 import { laceTexture } from '../textures/art'
 import { carpetTexture, damaskTexture } from '../textures/surfaces'
-import { digitRingTexture, flowerIconTexture } from '../textures/dials'
+import { brassPlateTexture, digitRingTexture, flowerIconTexture } from '../textures/dials'
 import { byobuTexture, kimonoTexture } from '../textures/props'
 import { paperTexture } from '../textures/small'
 import type { Interactable, RoomModule, ViewDef } from '../types'
@@ -44,9 +44,9 @@ export const buildBedroom = (materials: Materials, tweens: Tweens): RoomModule =
   east.position.set(CX + W / 2, 0, 0)
   group.add(east)
 
-  // 月の見える窓
-  const window = buildWindow(1.44, 1.66, materials, { moon: true, lace: laceTexture(), seed: 83 })
-  window.position.set(CX, 0.9, -D / 2 + 0.02)
+  // 夜空の見える窓 — 壁からのオフセットは枠の前面が壁面と同一平面にならない値にする(Zファイティング防止)
+  const window = buildWindow(1.44, 1.66, materials, { moon: false, lace: laceTexture(), seed: 83 })
+  window.position.set(CX, 0.9, -D / 2 + 0.035)
   group.add(window)
 
   // 敷物(寝台の脇)
@@ -105,33 +105,58 @@ export const buildBedroom = (materials: Materials, tweens: Tweens): RoomModule =
   const diary = boxMesh(0.2, 0.035, 0.27, new THREE.MeshStandardMaterial({ map: paperTexture('diary'), roughness: 0.7 }), -0.08, 0.66, 0.02)
   diary.rotation.y = 0.25
   sideTable.add(diary)
-  // 小さなランプ
-  const lampBase = cylinderMesh(0.035, 0.05, 0.16, materials.brassDark, 10)
-  lampBase.position.set(0.13, 0.72, -0.06)
-  sideTable.add(lampBase)
+  // 小さなランプ(丸い傘の置きランプ、花瓶型の真鍮支柱)
+  const lamp = new THREE.Group()
+  lamp.position.set(0.13, 0.645, -0.06)
+  const stemPts = [
+    new THREE.Vector2(0.055, 0),
+    new THREE.Vector2(0.055, 0.012),
+    new THREE.Vector2(0.028, 0.022),
+    new THREE.Vector2(0.017, 0.1),
+    new THREE.Vector2(0.026, 0.13),
+    new THREE.Vector2(0.022, 0.14),
+  ]
+  const lampStem = meshOf(new THREE.LatheGeometry(stemPts, 20), materials.brass)
+  lamp.add(lampStem)
+  const lampFootRing = meshOf(new THREE.TorusGeometry(0.055, 0.004, 8, 24), materials.brassDark)
+  lampFootRing.rotation.x = Math.PI / 2
+  lampFootRing.position.y = 0.012
+  lamp.add(lampFootRing)
+
+  const domeRadius = 0.095
+  const domeThetaLength = Math.PI * 0.48
+  const sphereCenterY = 0.14 - domeRadius * Math.cos(domeThetaLength)
   const lampShade = meshOf(
-    new THREE.ConeGeometry(0.09, 0.1, 14, 1, true),
+    new THREE.SphereGeometry(domeRadius, 20, 12, 0, Math.PI * 2, 0, domeThetaLength),
     new THREE.MeshStandardMaterial({
-      color: '#f4d9a8',
-      emissive: '#ffc478',
-      emissiveIntensity: 1.6,
+      color: '#f2e2bd',
+      roughness: 0.6,
       side: THREE.DoubleSide,
     }),
     false,
     false,
   )
-  lampShade.position.set(0.13, 0.85, -0.06)
-  sideTable.add(lampShade)
+  lampShade.position.y = sphereCenterY
+  lamp.add(lampShade)
+  const lampShadeTrim = meshOf(new THREE.TorusGeometry(domeRadius, 0.005, 8, 28), materials.brass)
+  lampShadeTrim.rotation.x = Math.PI / 2
+  lampShadeTrim.position.y = 0.14
+  lamp.add(lampShadeTrim)
+
+  const lampFinial = meshOf(new THREE.SphereGeometry(0.013, 12, 10), materials.brass)
+  lampFinial.position.y = sphereCenterY + domeRadius + 0.01
+  lamp.add(lampFinial)
+
+  sideTable.add(lamp)
   group.add(sideTable)
-  const bedsideLight = new THREE.PointLight('#ffc478', 5.5, 5, 2)
-  bedsideLight.position.set(CX + 0.48, 0.95, -2.05)
-  group.add(bedsideLight)
 
   // 鏡台(東壁・鏡は西向き=屏風を映す)
   const vanity = new THREE.Group()
   vanity.position.set(CX + 2.82, 0, 0.9)
-  vanity.add(boxMesh(0.44, 0.06, 1.0, materials.woodRed, 0, 0.72, 0))
-  vanity.add(boxMesh(0.4, 0.68, 0.9, materials.woodMid, 0, 0.36, 0))
+  // 天板は南側(宝石箱側)へ少し伸ばし、鏡の枠を避けつつ箱が余裕を持って乗る広さにする。
+  // 土台(引き出し部)も同じだけ伸ばし、天板が宙に浮いて見えないようにする
+  vanity.add(boxMesh(0.44, 0.06, 1.1, materials.woodRed, 0, 0.72, 0.05))
+  vanity.add(boxMesh(0.4, 0.68, 1.0, materials.woodMid, 0, 0.36, 0.05))
   // 鏡(実反射)
   const mirror = new Reflector(new THREE.PlaneGeometry(0.52, 0.9), {
     textureWidth: 512,
@@ -146,46 +171,67 @@ export const buildBedroom = (materials: Materials, tweens: Tweens): RoomModule =
   vanity.add(mirrorFrame)
   group.add(vanity)
 
-  // 宝石箱(花のダイヤル×3)— 鏡台の天板の南端(鏡に被らない位置)
-  const JEWEL_Z = 1.32
+  // 宝石箱(花のダイヤル×3)— 鏡台の天板の南端(鏡の枠と天板の縁の間)に収める
+  // 天板は世界Z [0.4, 1.5]、鏡の枠は世界Z [0.47, 1.13] まで。箱の奥行き0.28の
+  // 半分(0.14)を引いても両方に余裕を残せる位置に JEWEL_Z を置く
+  const JEWEL_Z = 1.3
   const jewelry = new THREE.Group()
   jewelry.position.set(CX + 2.82, 0.75, JEWEL_Z)
   jewelry.rotation.y = -Math.PI / 2
-  jewelry.add(boxMesh(0.34, 0.16, 0.22, materials.woodRed, 0, 0.08, 0))
+  jewelry.add(boxMesh(0.28, 0.16, 0.22, materials.woodRed, 0, 0.08, 0))
   const jewelLidHinge = new THREE.Group()
   jewelLidHinge.position.set(0, 0.16, -0.11)
-  jewelLidHinge.add(boxMesh(0.34, 0.03, 0.22, materials.woodDark, 0, 0.015, 0.11))
+  jewelLidHinge.add(boxMesh(0.28, 0.03, 0.22, materials.woodDark, 0, 0.015, 0.11))
   jewelry.add(jewelLidHinge)
   // 内張り
-  jewelry.add(boxMesh(0.3, 0.02, 0.18, new THREE.MeshStandardMaterial({ color: '#5e2536', roughness: 1 }), 0, 0.155, 0))
+  jewelry.add(boxMesh(0.24, 0.02, 0.18, new THREE.MeshStandardMaterial({ color: '#5e2536', roughness: 1 }), 0, 0.155, 0))
   const ringTexture = digitRingTexture()
   const jewelryDials: THREE.Mesh[] = []
   const flowerKinds = ['sakura', 'ume', 'kiku'] as const
+  // 前面の構成(下から): 数字窓付きダイヤル → 花の彫刻 → 蓋の留め金「開ける」
   flowerKinds.forEach((kind, i) => {
     const x = (i - 1) * 0.1
     const dial = meshOf(
       new THREE.CylinderGeometry(0.032, 0.032, 0.028, 20, 1, false),
-      new THREE.MeshStandardMaterial({ map: ringTexture.clone(), roughness: 0.5, metalness: 0.35 }),
+      // 覆いの影の中でも数字が読めるよう、ごく弱い自発光を入れる
+      new THREE.MeshStandardMaterial({
+        map: ringTexture.clone(),
+        roughness: 0.5,
+        metalness: 0.35,
+        emissive: '#8a744a',
+        emissiveMap: ringTexture.clone(),
+        emissiveIntensity: 0.5,
+      }),
     )
     dial.rotation.z = Math.PI / 2
-    dial.position.set(x, 0.07, 0.115)
+    dial.position.set(x, 0.058, 0.115)
     jewelry.add(dial)
     jewelryDials.push(dial)
     const icon = meshOf(
-      new THREE.PlaneGeometry(0.055, 0.055),
+      new THREE.PlaneGeometry(0.046, 0.046),
       new THREE.MeshStandardMaterial({ map: flowerIconTexture(kind), roughness: 0.6 }),
       false,
       false,
     )
-    icon.position.set(x, 0.135, 0.112)
+    icon.position.set(x, 0.118, 0.112)
     jewelry.add(icon)
-    // 現在値(正面の数字)を指す小さな刻み
-    const pointer = boxMesh(0.006, 0.012, 0.01, materials.brass, x, 0.108, 0.142)
-    jewelry.add(pointer)
+    // 数字窓(オドメーター式の覆い)— 正面の1桁だけが見え、合わせる位置が分かる
+    jewelry.add(boxMesh(0.05, 0.022, 0.008, materials.brassDark, x, 0.082, 0.152))
+    jewelry.add(boxMesh(0.05, 0.022, 0.008, materials.brassDark, x, 0.034, 0.152))
+    jewelry.add(boxMesh(0.006, 0.07, 0.008, materials.brass, x - 0.022, 0.058, 0.152))
+    jewelry.add(boxMesh(0.006, 0.07, 0.008, materials.brass, x + 0.022, 0.058, 0.152))
   })
-  const latch = meshOf(new THREE.SphereGeometry(0.018, 10, 8), materials.brass)
-  latch.position.set(0, 0.02, 0.118)
+  // 決定ボタン(「開ける」の留め金)— 実物の宝石箱と同じく、蓋の継ぎ目の前面中央に置く
+  const latch = boxMesh(0.11, 0.032, 0.03, materials.brass, 0, 0.166, 0.124)
   jewelry.add(latch)
+  const latchLabel = meshOf(
+    new THREE.PlaneGeometry(0.104, 0.028),
+    new THREE.MeshStandardMaterial({ map: brassPlateTexture('開 け る'), roughness: 0.45, metalness: 0.4 }),
+    false,
+    false,
+  )
+  latchLabel.position.set(0, 0.166, 0.1395)
+  jewelry.add(latchLabel)
   group.add(jewelry)
 
   // 洋箪笥(観音開き・着物)
@@ -302,14 +348,15 @@ export const buildBedroom = (materials: Materials, tweens: Tweens): RoomModule =
   group.add(bedHit, sideHit, vanityHit, jewelryHit, wardrobeHit, kimonoHit, byobuHit, windowHit)
 
   // ダイヤルの当たり判定(ローカル +x → ワールド +z の対応に合わせる)
+  // 「開ける」の留め金は蓋の継ぎ目(上段)にあり、ダイヤル(下段)とは視線がかすらない
   const jewelryDialHits: THREE.Mesh[] = []
   flowerKinds.forEach((_, i) => {
-    const hit = hitbox(0.14, 0.12, 0.1)
-    hit.position.set(CX + 2.82 - 0.115, 0.82, JEWEL_Z + (i - 1) * 0.1)
+    const hit = hitbox(0.08, 0.075, 0.095)
+    hit.position.set(CX + 2.82 - 0.14, 0.808, JEWEL_Z + (i - 1) * 0.1)
     group.add(hit)
     jewelryDialHits.push(hit)
   })
-  const latchHit = hitbox(0.16, 0.1, 0.34, CX + 2.82 - 0.118, 0.77, JEWEL_Z)
+  const latchHit = hitbox(0.12, 0.06, 0.2, CX + 2.82 - 0.14, 0.916, JEWEL_Z)
   group.add(latchHit)
 
   const interactables: Interactable[] = [
@@ -426,8 +473,9 @@ export const buildBedroom = (materials: Materials, tweens: Tweens): RoomModule =
       jewelLidHinge.rotation.x = state.flags.jewelrySolved ? -1.75 : 0
       state.jewelryDials.forEach((value, i) => {
         const dial = jewelryDials[i]
-        // 正面(視点側)に現在値が来る位相(スクリーンショットで較正済み)
-        if (dial) dial.rotation.x = (value / 10) * Math.PI * 2
+        // 数字窓の正面に現在値が来る位相。Euler 順序 XYZ では z(横倒し)が先に
+        // 適用されるため、x 回転がドラムを自軸で回す。+1 は窓位置の較正
+        if (dial) dial.rotation.x = ((value + 1) / 10) * Math.PI * 2 + 0.02
       })
       mirror.visible = state.currentRoom === 'bedroom'
     },

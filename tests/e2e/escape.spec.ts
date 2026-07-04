@@ -44,9 +44,8 @@ test('タイトルから脱出・リザルトまで完走できる', async ({ pa
 test('ヒントとおぼえがきが機能する', async ({ page }) => {
   await startNewGame(page)
   await page.getByRole('button', { name: '？ ヒント' }).click()
-  await expect(page.locator('.hint-item').first()).toBeVisible()
-  await page.locator('.hint-item button').first().click()
-  await page.getByRole('button', { name: 'ヒントを見る' }).first().click()
+  await expect(page.locator('.hint-item')).toHaveCount(1)
+  await page.getByRole('button', { name: 'ヒントを見る' }).click()
   await expect(page.locator('.hint-stage').first()).toBeVisible()
   await page.getByRole('button', { name: '閉じる' }).click()
 

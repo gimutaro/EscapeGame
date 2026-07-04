@@ -271,30 +271,41 @@ export const buildCabinet = (materials: Materials, tweens: Tweens): DevicePart =
   innerShadow.castShadow = false
   group.add(innerShadow)
   // ガラス扉(框組み+ガラス。中のオルゴールが透けて見える)
+  // 各扉は蝶番(ローカル原点)から中央まで届く幅 0.614。開口(幅1.24・高さ1.33)を
+  // 左右で隙間なく塞ぎ、中央の突き合わせだけ細い目地が残る
   const buildGlassDoor = (mirror: 1 | -1): THREE.Group => {
     const door = new THREE.Group()
-    const cx = mirror * 0.29
-    door.add(boxMesh(0.58, 0.07, 0.03, materials.woodRed, cx, 0.635, 0))
-    door.add(boxMesh(0.58, 0.07, 0.03, materials.woodRed, cx, -0.635, 0))
-    door.add(boxMesh(0.06, 1.34, 0.03, materials.woodRed, cx - mirror * 0.26, 0, 0))
-    door.add(boxMesh(0.06, 1.34, 0.03, materials.woodRed, cx + mirror * 0.26, 0, 0))
-    const glass = boxMesh(0.47, 1.22, 0.012, materials.glass, cx, 0, 0)
+    const cx = mirror * 0.311
+    door.add(boxMesh(0.614, 0.07, 0.03, materials.woodRed, cx, 0.625, 0))
+    door.add(boxMesh(0.614, 0.07, 0.03, materials.woodRed, cx, -0.625, 0))
+    door.add(boxMesh(0.06, 1.32, 0.03, materials.woodRed, cx - mirror * 0.277, 0, 0))
+    door.add(boxMesh(0.06, 1.32, 0.03, materials.woodRed, cx + mirror * 0.277, 0, 0))
+    const glass = boxMesh(0.5, 1.2, 0.012, materials.glass, cx, 0, 0)
     glass.castShadow = false
     door.add(glass)
+    // 取っ手(中央側の框に付く真鍮の丸つまみ)
+    const knobX = cx + mirror * 0.277
+    const neck = cylinderMesh(0.007, 0.007, 0.025, materials.brass, 8)
+    neck.rotation.x = Math.PI / 2
+    neck.position.set(knobX, 0, 0.027)
+    door.add(neck)
+    const knob = meshOf(new THREE.SphereGeometry(0.013, 12, 10), materials.brass)
+    knob.position.set(knobX, 0, 0.044)
+    door.add(knob)
     return door
   }
   const leftHinge = new THREE.Group()
-  leftHinge.position.set(bx - 0.62, 1.24, bz + 0.2)
+  leftHinge.position.set(bx - 0.62, 1.165, bz + 0.2)
   leftHinge.add(buildGlassDoor(1))
   const rightHinge = new THREE.Group()
-  rightHinge.position.set(bx + 0.62, 1.24, bz + 0.2)
+  rightHinge.position.set(bx + 0.62, 1.165, bz + 0.2)
   const rightDoorGroup = buildGlassDoor(-1)
   rightHinge.add(rightDoorGroup)
   group.add(leftHinge, rightHinge)
-  // 鍵穴の飾り(右扉の内側の框に付く)
-  const keyholePlate = meshOf(new THREE.CylinderGeometry(0.03, 0.03, 0.012, 12), materials.brass)
+  // 鍵穴の飾り(右扉の中央側の框、つまみの下に付く)
+  const keyholePlate = meshOf(new THREE.CylinderGeometry(0.024, 0.024, 0.012, 12), materials.brass)
   keyholePlate.rotation.x = Math.PI / 2
-  keyholePlate.position.set(-0.03, -0.14, 0.025)
+  keyholePlate.position.set(-0.588, -0.11, 0.018)
   rightDoorGroup.add(keyholePlate)
   // マッチ箱(開けると取得済みになるので非表示化)
   const matchbox = boxMesh(
