@@ -458,27 +458,40 @@ button { font-family: var(--mincho); cursor: pointer; }
 }
 .confirm-actions .yes { border-color: #a0433f; color: #a0433f; }
 
-/* 縦持ちの横向き推奨(小画面のみ・操作は妨げない) */
-.rotate-hint { display: none; }
-@media (orientation: portrait) and (max-width: 720px) {
-  .rotate-hint {
-    display: block;
-    position: absolute;
-    top: calc(62px + env(safe-area-inset-top, 0px));
-    left: 50%; transform: translateX(-50%);
-    background: var(--lacquer-soft);
-    border: 1px solid var(--brass-dim);
-    border-radius: 2px;
-    padding: 6px 14px;
-    font-size: 11px; letter-spacing: 0.18em;
-    color: rgba(240, 230, 208, 0.85);
-    pointer-events: none;
-    white-space: nowrap;
-    z-index: 20;
-  }
+/* モバイル調整(共通ベースライン。方向別の細部は下の2ブロックで上書きする) */
+@media (max-width: 720px) {
+  .slot { width: 46px; height: 46px; }
+  .slot-name { bottom: 52px; }
+  .hud-btn { padding: 7px 10px; font-size: 12px; }
+  .back-btn { padding: 10px 18px; font-size: 14px; top: calc(60px + env(safe-area-inset-top, 0px)); right: calc(14px + env(safe-area-inset-right, 0px)); }
+  .dial-btn { width: 46px; height: 46px; }
+  .title-inner { flex-direction: column; gap: 30px; }
+  .title-text { margin: 0; max-height: 46vh; }
+  .doc-reader { font-size: 14px; }
+  .modal { max-height: 88vh; }
+  .modal-body { padding: 12px 14px 16px; }
+  .result-panel { padding: 30px 24px; width: min(440px, 94vw); }
+  .setting-row input[type='range'] { width: 150px; }
 }
 
-/* 横向きスマホ(画面高が低い)向けの縮小 */
+/* 縦持ちスマホ(主対応: 操作パネルが2段に折り返るぶん、上下の余白を広めに取る) */
+@media (orientation: portrait) and (max-width: 720px) {
+  .inventory { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); gap: 5px; padding: 6px 8px; max-width: 96vw; overflow-x: auto; }
+  .slot { width: 40px; height: 40px; flex: 0 0 auto; }
+  .slot-name { bottom: 46px; }
+  .hud-top { gap: 6px; }
+  .hud-btn { padding: 6px 9px; font-size: 11px; }
+  .back-btn { top: calc(56px + env(safe-area-inset-top, 0px)); padding: 8px 14px; font-size: 13px; }
+  .message { bottom: calc(66px + env(safe-area-inset-bottom, 0px)); font-size: 13px; padding: 9px 14px; max-width: 92vw; }
+  .clock-controls {
+    bottom: calc(185px + env(safe-area-inset-bottom, 0px));
+    flex-wrap: wrap; justify-content: center; max-width: 92vw;
+  }
+  .dial-btn { width: 40px; height: 40px; }
+  .view-hint-text { bottom: calc(185px + env(safe-area-inset-bottom, 0px)); max-width: 90vw; white-space: normal; text-align: center; }
+}
+
+/* 横向きスマホ(画面高が低い場合の縮小。操作パネルは1段のまま収まる) */
 @media (max-height: 480px) {
   .slot { width: 42px; height: 42px; }
   .slot-name { bottom: 48px; }
@@ -495,22 +508,4 @@ button { font-family: var(--mincho); cursor: pointer; }
   .modal-body { padding: 10px 16px 14px; }
   .doc-reader { max-height: 44vh; font-size: 14px; }
   .view-hint-text { bottom: 118px; }
-}
-
-/* モバイル調整 */
-@media (max-width: 720px) {
-  .slot { width: 46px; height: 46px; }
-  .slot-name { bottom: 52px; }
-  .hud-btn { padding: 7px 10px; font-size: 12px; }
-  .message { font-size: 13px; bottom: 80px; padding: 10px 14px; max-width: 92vw; min-width: 0; }
-  .back-btn { padding: 10px 18px; font-size: 14px; top: calc(60px + env(safe-area-inset-top, 0px)); right: calc(14px + env(safe-area-inset-right, 0px)); }
-  .clock-controls { bottom: 140px; }
-  .dial-btn { width: 46px; height: 46px; }
-  .title-inner { flex-direction: column; gap: 30px; }
-  .title-text { margin: 0; max-height: 46vh; }
-  .doc-reader { font-size: 14px; }
-  .modal { max-height: 88vh; }
-  .modal-body { padding: 12px 14px 16px; }
-  .result-panel { padding: 30px 24px; width: min(440px, 94vw); }
-  .setting-row input[type='range'] { width: 150px; }
 }

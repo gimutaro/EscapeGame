@@ -118,7 +118,6 @@ const boot = (): void => {
   ui.appendChild(story.root)
   ui.appendChild(result.root)
   ui.appendChild(modals.root)
-  ui.appendChild(el('div', 'rotate-hint', '横向きにすると遊びやすくなります'))
   ui.appendChild(fade.root)
 
   // --- 操作 ---
@@ -276,6 +275,9 @@ const boot = (): void => {
       position: engine.camera.position.toArray(),
       mode: rig.mode(),
       view: rig.currentView(),
+      fov: engine.camera.fov,
+      aspect: engine.camera.aspect,
+      quaternion: engine.camera.quaternion.toArray(),
     }),
     project: (x, y, z) => {
       const v = new THREE.Vector3(x, y, z).project(engine.camera)

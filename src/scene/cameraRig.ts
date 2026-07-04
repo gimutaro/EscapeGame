@@ -25,7 +25,8 @@ export interface CameraRig {
 const ROOM_FOV = 62
 const FOCUS_FOV = 46
 /** FOV は横長画面(16:10 以上)を基準に設計されている。
- *  それより縦長の画面では水平視野を保つよう垂直 FOV を広げる(フィッシュアイ防止の上限つき) */
+ *  それより縦長の画面(スマホ縦持ちなど)では水平視野を保つよう垂直 FOV を広げる
+ *  (フィッシュアイ防止の上限つき) */
 const DESIGN_ASPECT = 16 / 10
 const MAX_FOV = 92
 
@@ -91,7 +92,7 @@ export const createCameraRig = (camera: THREE.PerspectiveCamera): CameraRig => {
   const startTransition = (
     toPos: THREE.Vector3,
     toLook: THREE.Vector3,
-    toFov: number,
+    toFovDesign: number,
     after: RigMode,
     afterView: ViewId | null,
     duration = 0.65,
@@ -100,13 +101,18 @@ export const createCameraRig = (camera: THREE.PerspectiveCamera): CameraRig => {
     const dummy = new THREE.PerspectiveCamera()
     dummy.position.copy(toPos)
     dummy.lookAt(toLook)
+    // 遷移開始時点で最終表示値まで解決してから補間する(from/to をそれぞれの
+    // design fov のまま補間して毎フレーム adjustFov し直すと、丸め誤差で
+    // 画角がわずかに揺れることがあるため)
+    const toFovResolved = adjustFov(toFovDesign)
+    baseFov = toFovDesign
     transition = {
       fromPos: camera.position.clone(),
       fromQuat: camera.quaternion.clone(),
-      fromFov: baseFov,
+      fromFov: camera.fov,
       toPos: toPos.clone(),
       toQuat: dummy.quaternion.clone(),
-      toFov: toFov,
+      toFov: toFovResolved,
       t: 0,
       duration,
       after,
@@ -168,8 +174,8 @@ export const createCameraRig = (camera: THREE.PerspectiveCamera): CameraRig => {
         const t = easeInOutCubic(Math.min(1, transition.t))
         camera.position.lerpVectors(transition.fromPos, transition.toPos, t)
         camera.quaternion.slerpQuaternions(transition.fromQuat, transition.toQuat, t)
-        baseFov = THREE.MathUtils.lerp(transition.fromFov, transition.toFov, t)
-        camera.fov = adjustFov(baseFov)
+        // from/to は遷移開始時点で最終表示値まで解決済みなので、そのまま補間する
+        camera.fov = THREE.MathUtils.lerp(transition.fromFov, transition.toFov, t)
         camera.updateProjectionMatrix()
         if (transition.t >= 1) {
           mode = transition.after

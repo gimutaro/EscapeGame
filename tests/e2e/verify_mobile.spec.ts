@@ -36,12 +36,15 @@ test('スマホ(横向き)でタップ操作できる', async ({ page }) => {
   )
 })
 
-test('スマホ(縦向き)では横向き推奨が出る', async ({ page }) => {
+test('スマホ(縦向き)でも部屋いっぱいに表示され、HUD が操作できる', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   await page.getByRole('button', { name: 'はじめる' }).tap()
   await page.getByRole('button', { name: 'とばす ≫' }).tap()
   await page.waitForFunction(() => window.__game?.getState().phase === 'playing')
-  await expect(page.locator('.rotate-hint')).toBeVisible()
+  await page.waitForTimeout(400)
+  // 縦持ち専用の案内は出さず、通常の HUD がそのまま操作できる
+  await expect(page.locator('.rotate-hint')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '？ ヒント' })).toBeVisible()
   await page.screenshot({ path: '/tmp/mobile-portrait.png' })
 })
