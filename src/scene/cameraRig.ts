@@ -24,6 +24,10 @@ export interface CameraRig {
 
 const ROOM_FOV = 62
 const FOCUS_FOV = 46
+/** FOV は横長画面(16:10 以上)を基準に設計されている。
+ *  それより縦長の画面では水平視野を保つよう垂直 FOV を広げる(フィッシュアイ防止の上限つき) */
+const DESIGN_ASPECT = 16 / 10
+const MAX_FOV = 92
 
 export const createCameraRig = (camera: THREE.PerspectiveCamera): CameraRig => {
   const views = new Map<ViewId, ViewDef>()
@@ -66,6 +70,24 @@ export const createCameraRig = (camera: THREE.PerspectiveCamera): CameraRig => {
     camera.quaternion.copy(roomQuaternion())
   }
 
+  // 設計値の FOV(16:9 基準)。実際の camera.fov は画面比率で補正して適用する
+  let baseFov = ROOM_FOV
+
+  const adjustFov = (designFov: number): number => {
+    if (camera.aspect >= DESIGN_ASPECT) return designFov
+    const halfH = Math.atan(Math.tan(THREE.MathUtils.degToRad(designFov / 2)) * DESIGN_ASPECT)
+    const fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(halfH) / camera.aspect))
+    return Math.min(fov, MAX_FOV)
+  }
+
+  const applyFov = () => {
+    const target = adjustFov(baseFov)
+    if (Math.abs(camera.fov - target) > 0.01) {
+      camera.fov = target
+      camera.updateProjectionMatrix()
+    }
+  }
+
   const startTransition = (
     toPos: THREE.Vector3,
     toLook: THREE.Vector3,
@@ -81,7 +103,7 @@ export const createCameraRig = (camera: THREE.PerspectiveCamera): CameraRig => {
     transition = {
       fromPos: camera.position.clone(),
       fromQuat: camera.quaternion.clone(),
-      fromFov: camera.fov,
+      fromFov: baseFov,
       toPos: toPos.clone(),
       toQuat: dummy.quaternion.clone(),
       toFov: toFov,
@@ -106,8 +128,8 @@ export const createCameraRig = (camera: THREE.PerspectiveCamera): CameraRig => {
       currentView = null
       if (immediate) {
         mode = 'room'
-        camera.fov = ROOM_FOV
-        camera.updateProjectionMatrix()
+        baseFov = ROOM_FOV
+        applyFov()
         applyRoomCamera()
       }
     },
@@ -146,7 +168,8 @@ export const createCameraRig = (camera: THREE.PerspectiveCamera): CameraRig => {
         const t = easeInOutCubic(Math.min(1, transition.t))
         camera.position.lerpVectors(transition.fromPos, transition.toPos, t)
         camera.quaternion.slerpQuaternions(transition.fromQuat, transition.toQuat, t)
-        camera.fov = THREE.MathUtils.lerp(transition.fromFov, transition.toFov, t)
+        baseFov = THREE.MathUtils.lerp(transition.fromFov, transition.toFov, t)
+        camera.fov = adjustFov(baseFov)
         camera.updateProjectionMatrix()
         if (transition.t >= 1) {
           mode = transition.after
@@ -155,6 +178,8 @@ export const createCameraRig = (camera: THREE.PerspectiveCamera): CameraRig => {
         }
         return
       }
+      // 静止中も画面回転(アスペクト変化)に追随する
+      applyFov()
       if (mode === 'room') {
         // 慣性
         yawVelocity *= Math.pow(0.0005, dt)

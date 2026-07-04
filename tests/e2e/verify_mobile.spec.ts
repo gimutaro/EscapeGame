@@ -17,14 +17,8 @@ test('スマホ(横向き)でタップ操作できる', async ({ page }) => {
 
   // タッチドラッグで視点が回る(固定点の画面座標が動く)
   const before = await page.evaluate(() => window.__game?.project?.(0, 1.5, -3.4))
-  await page.touchscreen.tap(420, 195) // 音声アンロック相当のタッチ
-  const canvas = page.locator('#app canvas')
-  const box = await canvas.boundingBox()
-  if (!box) throw new Error('canvas が見つからない')
-  const cx = box.x + box.width / 2
-  const cy = box.y + box.height / 2
   await page.evaluate(() => {
-    const c = document.querySelector('#app canvas')
+    const c = document.querySelector('canvas[data-engine]')
     if (!c) return
     const opts = { bubbles: true, pointerType: 'touch', isPrimary: true, pointerId: 7 }
     c.dispatchEvent(new PointerEvent('pointerdown', { ...opts, clientX: 400, clientY: 200 }))
@@ -40,8 +34,6 @@ test('スマホ(横向き)でタップ操作できる', async ({ page }) => {
   expect(before && after && Math.abs(after.x - before.x) > 10, '視点ドラッグが効いていない').toBe(
     true,
   )
-  void cx
-  void cy
 })
 
 test('スマホ(縦向き)では横向き推奨が出る', async ({ page }) => {
