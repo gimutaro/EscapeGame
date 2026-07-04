@@ -68,7 +68,7 @@ export const buildLiving = (materials: Materials, tweens: Tweens): RoomModule =>
       panel.add(boxMesh(0.66, ph, 0.02, materials.woodDark, -side * 0.46, py, 0.05))
     }
     const handle = cylinderMesh(0.02, 0.02, 0.24, materials.brass, 10)
-    handle.position.set(-side * 0.12, 1.25, 0.08)
+    handle.position.set(-side * 0.75, 1.25, 0.08)
     panel.add(handle)
     hinge.add(panel)
     entrance.add(hinge)
