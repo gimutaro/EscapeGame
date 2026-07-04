@@ -100,11 +100,14 @@ export const createStoryScreen = (): StoryScreen => {
   let index = 0
   let onDoneCb: (() => void) | null = null
   let petalTimer: number | null = null
-  let renderTimer: number | null = null
+  let fallbackTimer: number | null = null
+  let transitionHandler: ((e: TransitionEvent) => void) | null = null
 
   const clearRenderTimer = () => {
-    if (renderTimer !== null) clearTimeout(renderTimer)
-    renderTimer = null
+    if (fallbackTimer !== null) clearTimeout(fallbackTimer)
+    fallbackTimer = null
+    if (transitionHandler !== null) text.removeEventListener('transitionend', transitionHandler)
+    transitionHandler = null
   }
 
   const finish = () => {
@@ -124,13 +127,22 @@ export const createStoryScreen = (): StoryScreen => {
       return
     }
     clearRenderTimer()
-    text.classList.add('dim')
-    // .story-text の transition: opacity 0.7s と揃える(完全にフェードアウトしてから差し替える)
-    renderTimer = window.setTimeout(() => {
-      renderTimer = null
+    const swap = () => {
+      clearRenderTimer()
       text.textContent = page
+      // 強制リフロー: WebKit で稀に起きる旧テキストの残像描画を防ぐ
+      void text.offsetHeight
       text.classList.remove('dim')
-    }, 700)
+    }
+    // 固定時間待ちだと端末の描画負荷でフェード完了とズレて前の文字が残ることがあるため、
+    // 実際のフェード完了(transitionend)を待って差し替える。発火しない場合の保険として
+    // フォールバックタイマーも仕込む。
+    transitionHandler = (e) => {
+      if (e.target === text && e.propertyName === 'opacity') swap()
+    }
+    text.addEventListener('transitionend', transitionHandler)
+    fallbackTimer = window.setTimeout(swap, 750)
+    text.classList.add('dim')
   }
 
   root.addEventListener('click', () => {
