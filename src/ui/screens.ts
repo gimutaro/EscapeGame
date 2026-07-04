@@ -54,7 +54,9 @@ export const createTitleScreen = (handlers: {
   menu.appendChild(button('menu-btn', '設定', handlers.onSettings))
   menu.appendChild(button('menu-btn', 'この作品について', handlers.onCredits))
   const titleText = el('div', 'title-text')
-  titleText.appendChild(el('h1', '', '久遠寺邸の一夜'))
+  const titleH1 = el('h1')
+  titleH1.append('久遠寺邸の', document.createElement('wbr'), '一夜')
+  titleText.appendChild(titleH1)
   titleText.appendChild(el('div', 'subtitle', '大正浪漫脱出奇譚'))
   inner.appendChild(menu)
   inner.appendChild(titleText)
@@ -96,8 +98,15 @@ export const createStoryScreen = (): StoryScreen => {
   let index = 0
   let onDoneCb: (() => void) | null = null
   let petalTimer: number | null = null
+  let renderTimer: number | null = null
+
+  const clearRenderTimer = () => {
+    if (renderTimer !== null) clearTimeout(renderTimer)
+    renderTimer = null
+  }
 
   const finish = () => {
+    clearRenderTimer()
     const cb = onDoneCb
     onDoneCb = null
     show(root, false)
@@ -112,8 +121,10 @@ export const createStoryScreen = (): StoryScreen => {
       finish()
       return
     }
+    clearRenderTimer()
     text.classList.add('dim')
-    setTimeout(() => {
+    renderTimer = window.setTimeout(() => {
+      renderTimer = null
       text.textContent = page
       text.classList.remove('dim')
     }, 320)

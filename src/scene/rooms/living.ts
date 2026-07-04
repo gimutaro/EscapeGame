@@ -3,6 +3,7 @@ import type { GameEvent } from '../../core/events'
 import type { GameState } from '../../core/state'
 import type { Tweens } from '../../utils/tween'
 import { createDust } from '../effects'
+import { getQualityTier } from '../quality'
 import type { Materials } from '../materials'
 import { boxMesh, cylinderMesh, hitbox, meshOf } from '../materials'
 import { buildCeiling, buildFloor, buildWall, buildWindow } from '../roomShell'
@@ -212,7 +213,8 @@ export const buildLiving = (materials: Materials, tweens: Tweens): RoomModule =>
   const mainLight = new THREE.PointLight('#ffc98a', 40, 0, 2)
   mainLight.position.set(0, 2.95, 0.2)
   mainLight.castShadow = true
-  mainLight.shadow.mapSize.set(1024, 1024)
+  const shadowMapSize = getQualityTier().shadowMapSize
+  mainLight.shadow.mapSize.set(shadowMapSize, shadowMapSize)
   mainLight.shadow.bias = -0.004
   group.add(mainLight)
   const ambient = new THREE.PointLight('#8a7a9a', 6, 0, 2)

@@ -3,6 +3,7 @@ import type { GameEvent } from '../../core/events'
 import type { GameState } from '../../core/state'
 import type { Tweens } from '../../utils/tween'
 import type { Materials } from '../materials'
+import { getQualityTier } from '../quality'
 import { boxMesh, cylinderMesh, hitbox, meshOf } from '../materials'
 import { buildCeiling, buildFloor, buildWall } from '../roomShell'
 import { nightWindowTexture } from '../textures/art'
@@ -123,7 +124,8 @@ export const buildStudy = (materials: Materials, tweens: Tweens): RoomModule & {
   const pendant = new THREE.PointLight('#ffcf9a', 15, 0, 2)
   pendant.position.set(CX, 2.7, 0.35)
   pendant.castShadow = true
-  pendant.shadow.mapSize.set(1024, 1024)
+  const shadowMapSize = getQualityTier().shadowMapSize
+  pendant.shadow.mapSize.set(shadowMapSize, shadowMapSize)
   pendant.shadow.bias = -0.004
   group.add(pendant)
   const pendantShade = meshOf(

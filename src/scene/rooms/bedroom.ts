@@ -3,6 +3,7 @@ import { Reflector } from 'three/addons/objects/Reflector.js'
 import type { GameEvent } from '../../core/events'
 import type { GameState } from '../../core/state'
 import type { Tweens } from '../../utils/tween'
+import { getQualityTier } from '../quality'
 import type { Materials } from '../materials'
 import { boxMesh, cylinderMesh, hitbox, meshOf } from '../materials'
 import { buildCeiling, buildFloor, buildWall, buildWindow } from '../roomShell'
@@ -310,10 +311,11 @@ export const buildBedroom = (materials: Materials, tweens: Tweens): RoomModule =
   group.add(byobu)
 
   // 照明
+  const shadowMapSize = getQualityTier().shadowMapSize
   const pendant = new THREE.PointLight('#ffc490', 17, 0, 2)
   pendant.position.set(CX, 2.7, 0)
   pendant.castShadow = true
-  pendant.shadow.mapSize.set(1024, 1024)
+  pendant.shadow.mapSize.set(shadowMapSize, shadowMapSize)
   pendant.shadow.bias = -0.004
   group.add(pendant)
   const pendantShade = meshOf(
@@ -332,7 +334,7 @@ export const buildBedroom = (materials: Materials, tweens: Tweens): RoomModule =
   moon.position.set(CX, 2.6, -3.6)
   moon.target.position.set(CX, 0.3, 0.9)
   moon.castShadow = true
-  moon.shadow.mapSize.set(1024, 1024)
+  moon.shadow.mapSize.set(shadowMapSize, shadowMapSize)
   moon.shadow.bias = -0.004
   group.add(moon, moon.target)
 
